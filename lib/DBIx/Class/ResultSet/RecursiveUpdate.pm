@@ -71,9 +71,11 @@ sub recursive_update {
     }
 
     my @pks = $source->primary_columns;
+    my %columns_by_accessor = _get_columns_by_accessor($self);
+
     if ( !defined $object &&
-        all { exists $updates->{$_} } @pks ) {
-        my @pks = map { $updates->{$_} } @pks;
+        all { exists($updates->{$_}) || exists($updates->{$columns_by_accessor{$_}->{accessor} || $_}) } @pks ) {
+        my @pks = map { $updates->{$_} || $updates->{$columns_by_accessor{$_}->{accessor}}} @pks;
         $object = $self->find( @pks, { key => 'primary' } );
     }
     elsif ( !defined $object && exists $updates->{id} ) {
@@ -118,14 +120,13 @@ sub recursive_update {
     my %post_updates;
     my %other_methods;
     my %m2m_accessors;
-    my %columns_by_accessor = _get_columns_by_accessor($self);
 
     for my $name ( keys %$updates ) {
 
         # columns
         if ( exists $columns_by_accessor{$name} &&
             !( $source->has_relationship($name) && ref( $updates->{$name} ) ) ) {
-            $columns{$name} = $updates->{$name};
+            $columns{$columns_by_accessor{$name}->{accessor} || $name} = $updates->{$name};
             next;
         }
 
@@ -255,7 +256,11 @@ sub _get_columns_by_accessor {
     for my $name ( $source->columns ) {
         my $info = $source->column_info($name);
         $info->{name} = $name;
-        $columns{ $info->{accessor} || $name } = $info;
+
+	#Include both as DBIx::Class generally give column name rather than accessor
+        $columns{ $info->{accessor} } = $info
+		if $info->{accessor};
+        $columns{ $name } = $info;
     }
     return %columns;
 }
