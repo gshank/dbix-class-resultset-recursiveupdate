@@ -364,13 +364,11 @@ sub _update_relation {
         $info->{attrs}{accessor} eq 'filter' ) {
         my $sub_object;
         if ( ref $updates ) {
-        
             my $no_new_object = 0;
             my @pks = $related_resultset->result_source->primary_columns;
             if ( all { exists $updates->{$_} } @pks ) {
                 $no_new_object = 1;
             }
-            
             if ( blessed($updates) && $updates->isa('DBIx::Class::Row') ) {
                 $sub_object = $updates;
             }
@@ -920,5 +918,5 @@ None reported.
 The list of reported bugs can be viewed at L<http://rt.cpan.org/Public/Dist/Display.html?Name=DBIx-Class-ResultSet-RecursiveUpdate>.
 
 Please report any bugs or feature requests to
-C<bug-dbix-class-recursiveput@rt.cpan.org>, or through the web interface at
+C<bug-DBIx-Class-ResultSet-RecursiveUpdate@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
