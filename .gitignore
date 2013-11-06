@@ -1,4 +1,5 @@
 # perl Makefile.PL
+DBIx-Class-ResultSet-RecursiveUpdate*
 /META.yml
 /Makefile
 /inc/
