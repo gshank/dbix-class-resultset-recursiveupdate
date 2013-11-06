@@ -241,6 +241,9 @@ sub recursive_update {
         $object->$set_meth( \@rows );
     }
     for my $name ( keys %post_updates ) {
+        # I'm not sure why the following is necessary, but sometimes we get here
+        # and the $object doesn't have a pk, and discard_changes must be executed
+        $object->discard_changes;
         _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted );
     }
     delete $ENV{DBIC_NULLABLE_KEY_NOWARN};
@@ -401,9 +404,8 @@ sub _update_relation {
         my $join_type = $attrs->{join_type} || '';
         # unmarked 'LEFT' join for belongs_to
         my $might_belong_to =
-               $attrs->{accessor} eq 'single' &&
-               $attrs->{is_foreign_key_constraint} &&
-               $attrs->{undef_on_null_fk};
+               ( $attrs->{accessor} eq 'single' || $attrs->{accessor} eq 'filter' ) &&
+               $attrs->{is_foreign_key_constraint};
         unless ( !$sub_object && !$updates && !$might_belong_to && !$join_type eq 'LEFT' ) {
             $object->set_from_related( $name, $sub_object );
         }
