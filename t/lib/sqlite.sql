@@ -73,12 +73,12 @@ CREATE TABLE cd (
   title varchar(100) NOT NULL,
   year varchar(100) NOT NULL,
   genreid integer,
-  single_track integer
+  single_track_id integer
 );
 
 CREATE INDEX cd_idx_artist_cd ON cd (artist);
 CREATE INDEX cd_idx_genreid_cd ON cd (genreid);
-CREATE INDEX cd_idx_single_track_cd ON cd (single_track);
+CREATE INDEX cd_idx_single_track_cd ON cd (single_track_id);
 CREATE UNIQUE INDEX cd_artist_title_cd ON cd (artist, title);
 
 --

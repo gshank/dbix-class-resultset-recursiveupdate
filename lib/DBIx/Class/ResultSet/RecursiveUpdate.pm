@@ -397,13 +397,10 @@ sub _update_relation {
                     $info->{attrs}{join_type} eq 'LEFT' )
                 );
         }
-        $object->set_from_related( $name, $sub_object )
-            unless (
-            !$sub_object &&
-            !$updates &&
-            ( exists $info->{attrs}{join_type} &&
-                $info->{attrs}{join_type} eq 'LEFT' )
-            );
+        my $join_type = $info->{attrs}{join_type} || '';
+        unless ( !$sub_object && !$updates && $join_type eq 'LEFT' ) {
+            $object->set_from_related( $name, $sub_object );
+        }
     }
     else {
         $self->throw_exception(

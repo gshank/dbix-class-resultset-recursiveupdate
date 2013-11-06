@@ -814,14 +814,14 @@ my $might_have = {
     artwork          => undef,
     liner_notes      => undef,
     tracks           => [ { title => 'hello', pos => '100' } ],
-    single_track_row => undef,
+    single_track     => undef,
 };
 
 ok my $might_have_cd_rs = $schema->resultset('CD'), 'got a good resultset';
 ok my $might_have_cd_row = $might_have_cd_rs->first, 'got cd to test';
 
 my $track = $schema->resultset('Track')->next;
-$might_have_cd_row->single_track_row($track);
+$might_have_cd_row->single_track($track);
 $might_have_cd_row->update;
 
 DBIx::Class::ResultSet::RecursiveUpdate::Functions::recursive_update(

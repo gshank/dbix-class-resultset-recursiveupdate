@@ -24,7 +24,7 @@ __PACKAGE__->add_columns(
     data_type => 'integer',
     is_nullable => 1,
   },
-  'single_track' => {
+  'single_track_id' => {
     data_type => 'integer',
     is_nullable => 1,
     is_foreign_key => 1,
@@ -40,7 +40,7 @@ __PACKAGE__->belongs_to( artist => 'DBICTest::Schema::Artist',
 });
 
 # in case this is a single-cd it promotes a track from another cd
-__PACKAGE__->belongs_to( single_track_row => 'DBICTest::Schema::Track', {'foreign.trackid'=>'self.single_track'} );
+__PACKAGE__->belongs_to( single_track => 'DBICTest::Schema::Track', {'foreign.trackid'=>'self.single_track_id'} );
 
 __PACKAGE__->has_many( tracks => 'DBICTest::Schema::Track' );
 __PACKAGE__->has_many(

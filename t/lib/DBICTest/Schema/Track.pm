@@ -34,7 +34,7 @@ __PACKAGE__->add_unique_constraint([ qw/cd title/ ]);
 __PACKAGE__->belongs_to( cd => 'DBICTest::Schema::CD' );
 __PACKAGE__->belongs_to( disc => 'DBICTest::Schema::CD' => 'cd');
 
-__PACKAGE__->might_have( cd_single => 'DBICTest::Schema::CD', 'single_track' );
+__PACKAGE__->might_have( cd_single => 'DBICTest::Schema::CD', 'single_track_id' );
 __PACKAGE__->might_have( lyrics => 'DBICTest::Schema::Lyrics', 'track_id' );
 
 __PACKAGE__->resultset_class( __PACKAGE__ . '::ResultSet');
