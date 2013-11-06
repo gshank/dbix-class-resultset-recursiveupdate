@@ -270,6 +270,7 @@ sub _update_relation {
         unless $object->has_relationship($name);
 
     my $info = $object->result_source->relationship_info($name);
+    my $attrs = $info->{attrs};
 
     # get a related resultset without a condition
     my $related_resultset = $self->related_resultset($name)->result_source->resultset;
@@ -299,7 +300,7 @@ sub _update_relation {
         unless defined $if_not_submitted;
 
     # the only valid datatype for a has_many rels is an arrayref
-    if ( $info->{attrs}{accessor} eq 'multi' ) {
+    if ( $attrs->{accessor} eq 'multi' ) {
 
         # handle undef like empty arrayref
         $updates = []
@@ -360,8 +361,8 @@ sub _update_relation {
             $rs_rel_delist->update( \%update );
         }
     }
-    elsif ( $info->{attrs}{accessor} eq 'single' ||
-        $info->{attrs}{accessor} eq 'filter' ) {
+    elsif ( $attrs->{accessor} eq 'single' ||
+        $attrs->{accessor} eq 'filter' ) {
         my $sub_object;
         if ( ref $updates ) {
             my $no_new_object = 0;
@@ -372,7 +373,7 @@ sub _update_relation {
             if ( blessed($updates) && $updates->isa('DBIx::Class::Row') ) {
                 $sub_object = $updates;
             }
-            elsif ( $info->{attrs}{accessor} eq 'single' &&
+            elsif ( $attrs->{accessor} eq 'single' &&
                 defined $object->$name )
             {
                 $sub_object = recursive_update(
@@ -393,12 +394,17 @@ sub _update_relation {
             $sub_object = $related_resultset->find($updates)
                 unless (
                 !$updates &&
-                ( exists $info->{attrs}{join_type} &&
-                    $info->{attrs}{join_type} eq 'LEFT' )
+                ( exists $attrs->{join_type} &&
+                    $attrs->{join_type} eq 'LEFT' )
                 );
         }
-        my $join_type = $info->{attrs}{join_type} || '';
-        unless ( !$sub_object && !$updates && $join_type eq 'LEFT' ) {
+        my $join_type = $attrs->{join_type} || '';
+        # unmarked 'LEFT' join for belongs_to
+        my $might_belong_to =
+               $attrs->{accessor} eq 'single' &&
+               $attrs->{is_foreign_key_constraint} &&
+               $attrs->{undef_on_null_fk};
+        unless ( !$sub_object && !$updates && !$might_belong_to && !$join_type eq 'LEFT' ) {
             $object->set_from_related( $name, $sub_object );
         }
     }

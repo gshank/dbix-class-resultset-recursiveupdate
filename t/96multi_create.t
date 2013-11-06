@@ -807,30 +807,35 @@ diag $@ if $@;
 
 ## Test for the might_have is allowed empty bug (should check and see if this
 ## needs patching upstream to DBIC
+{
 
-use DBIx::Class::ResultSet::RecursiveUpdate;
+    use DBIx::Class::ResultSet::RecursiveUpdate;
 
-my $might_have = {
-    artwork          => undef,
-    liner_notes      => undef,
-    tracks           => [ { title => 'hello', pos => '100' } ],
-    single_track     => undef,
-};
+    my $cd_rs = $schema->resultset('CD');
+    my $cd = $cd_rs->first;
 
-ok my $might_have_cd_rs = $schema->resultset('CD'), 'got a good resultset';
-ok my $might_have_cd_row = $might_have_cd_rs->first, 'got cd to test';
+    # add a track to the cd
+    my $track = $schema->resultset('Track')->next;
+    $cd->single_track($track);
+    $cd->update;
+    $cd->discard_changes;
+    ok( $cd->single_track_id, 'cd has a single_track_id' );
+    ok( $cd->single_track, 'cd has a single_track' );
 
-my $track = $schema->resultset('Track')->next;
-$might_have_cd_row->single_track($track);
-$might_have_cd_row->update;
+    DBIx::Class::ResultSet::RecursiveUpdate::Functions::recursive_update(
+        resultset => $cd_rs,
+        updates   => {
+            artwork          => undef,
+            liner_notes      => undef,
+            tracks           => [ { title => 'hello', pos => '100' } ],
+            single_track     => undef,
+        },
+        object    => $cd,
+    );
+    $cd->discard_changes;
 
-DBIx::Class::ResultSet::RecursiveUpdate::Functions::recursive_update(
-    resultset => $might_have_cd_rs,
-    updates   => $might_have,
-    object    => $might_have_cd_row,
-);
-
-is( $might_have_cd_row->single_track, undef, 'Might have deleted' );
+    is( $cd->single_track, undef, 'Might have deleted' );
+}
 
 1;
 
