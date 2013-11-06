@@ -1,6 +1,9 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
+0.31 Wed Nov 6, 2013
     - Fixed failing test when DBIC_TRACE_PROFILE is set
+    - Fix problem with join_type LEFT and undef (rt67528)
+    - discard_changes before handling post_updates
 
 0.30  Fri Jun 7, 2013
     - Update foreign key instead of related object when all PKs are set on a
