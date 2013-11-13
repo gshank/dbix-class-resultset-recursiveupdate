@@ -182,7 +182,7 @@ is( $dvd->name, 'Test name', 'Dvd name set' );
 # changing existing records
 my $num_of_users = $user_rs->count;
 $updates = {
-    id               => $dvd->dvd_id,         # id instead of dvd_id
+    dvd_id           => $dvd->dvd_id,
     name             => undef,
     tags             => [],
     owner            => $another_owner->id,
@@ -196,7 +196,7 @@ $updates = {
 };
 my $dvd_updated = $dvd_rs->recursive_update($updates);
 
-is( $dvd_updated->dvd_id, $dvd->dvd_id, 'Pk from "id"' );
+is( $dvd_updated->dvd_id, $dvd->dvd_id, 'Pk from "dvd_id"' );
 is( $schema->resultset('User')->count,
     $expected_user_count, "No new user created" );
 is( $dvd_updated->name, undef, 'Dvd name deleted' );
@@ -211,16 +211,16 @@ is(
 );
 
 my $dvd_with_tags =
-  $dvd_rs->recursive_update( { id => $dvd->dvd_id, tags => [ 1, 2 ] } );
+  $dvd_rs->recursive_update( { dvd_id => $dvd->dvd_id, tags => [ 1, 2 ] } );
 is_deeply( [ map { $_->id } $dvd_with_tags->tags ], [ 1, 2 ], 'Tags set' );
 my $dvd_without_tags =
-  $dvd_rs->recursive_update( { id => $dvd->dvd_id, tags => undef } );
+  $dvd_rs->recursive_update( { dvd_id => $dvd->dvd_id, tags => undef } );
 is( $dvd_without_tags->tags->count,
     0, 'Tags deleted when m2m accessor set to undef' );
 
 $new_dvd->update( { name => 'New Test Name' } );
 $updates = {
-    id => $new_dvd->dvd_id,    # id instead of dvd_id
+    dvd_id => $new_dvd->dvd_id,
     like_has_many => [ { dvd_name => $dvd->name, key2 => 1 } ],
 };
 $dvd_updated = $dvd_rs->recursive_update($updates);
@@ -274,7 +274,7 @@ $updates = {
         city   => "Podunk",
         state  => "New York"
     },
-    owned_dvds => [ { id => 1, }, ]
+    owned_dvds => [ { dvd_id => 1, }, ]
 };
 $user = $user_rs->recursive_update($updates);
 is( $schema->resultset('Address')->search( { user_id => $user->id } )->count,
@@ -288,7 +288,7 @@ $dvd_rs->update( { current_borrower => $user->id } );
 ok( $user->borrowed_dvds->count > 1, 'Precond' );
 $updates = {
     id            => $user->id,
-    borrowed_dvds => [ { id => $dvd->id }, ]
+    borrowed_dvds => [ { dvd_id => $dvd->id }, ]
 };
 $user = DBIx::Class::ResultSet::RecursiveUpdate::Functions::recursive_update(
     resultset        => $user_rs,
@@ -324,7 +324,7 @@ $dvd_updated =
   DBIx::Class::ResultSet::RecursiveUpdate::Functions::recursive_update(
     resultset => $schema->resultset('Dvd'),
     updates   => {
-        id   => $dvd->dvd_id,    # id instead of dvd_id
+        dvd_id => $dvd->dvd_id,
         tags => [
             { id => $tags[0]->id, file => 'file0' },
             { id => $tags[1]->id, file => 'file1' }
@@ -348,7 +348,7 @@ ok( my $new_user = $user_rs->recursive_update($new_person) );
 
 # delete has_many where foreign cols aren't nullable
 my $rs_user_dvd = $user->owned_dvds;
-my @user_dvd_ids = map { $_->id } $rs_user_dvd->all;
+my @user_dvd_ids = map { $_->dvd_id } $rs_user_dvd->all;
 is( $rs_user_dvd->count, 1, 'user owns 1 dvd' );
 $updates = {
     id         => $user->id,

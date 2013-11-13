@@ -1,4 +1,6 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
+    - 'id' can't be used any more as an alias for the primary key column name
+      as DBIx::Class doesn't treat it special
 
 0.31 Wed Nov 6, 2013
     - Fixed failing test when DBIC_TRACE_PROFILE is set

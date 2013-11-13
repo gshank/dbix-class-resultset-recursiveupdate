@@ -60,7 +60,7 @@ push @$tag_ids, 1;
 
 
 my %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => $tag_ids,
 );
 
@@ -81,7 +81,7 @@ is $dvd_item->tags_rs->count, 3, "add one: DVD item has 3 tags";
 shift @$tag_ids;
 
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => $tag_ids,
 );
 
@@ -103,7 +103,7 @@ is $dvd_item->tags_rs->count, 2, "remove one: DVD item has 2 tags";
 #push @$tag_ids, ( 4, 5, 6 );
 
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => [
             (map { { name => $_->name, id => $_->id } } $dvd_item->tags->all) ,
             { name => "winnie" },
@@ -130,7 +130,7 @@ is $dvd_item->tags_rs->count, 5, "add several: DVD item has 5 tags";
 #push @$tag_ids, ( 4, 5, 6 );
 
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => [
             (map { { name => $_->name."_Changed", id => $_->id } } $dvd_item->tags->all) ,
     ],
@@ -154,7 +154,7 @@ is $dvd_item->tags_rs->count, 5, "add several: DVD item has 5 tags";
 
 
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => [
             (map { { name => $_->name."More", id => $_->id } } $dvd_item->tags->all) ,
     ],
@@ -180,7 +180,7 @@ is $dvd_item->tags_rs->count, 3, "add several: DVD item has 3 tags";
 
 
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => [
             (map { { name => $_->name."More", id => $_->id } } $dvd_item->tags->all) ,
             { name => "rob" },
@@ -207,7 +207,7 @@ is $dvd_item->tags_rs->count, 5, "add several: DVD item has 5 tags";
 
 $tag_ids = [4,5];
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => $tag_ids,
 );
 
@@ -228,7 +228,7 @@ is $dvd_item->tags_rs->count, 2, "remove several: DVD item has 2 tags";
 
 $tag_ids = [];
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => $tag_ids,
 );
 
@@ -247,7 +247,7 @@ is $dvd_item->tags_rs->count, 0, "remove all: DVD item has no tags";
 
 $tag_ids = [2,4];
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => $tag_ids,
 );
 
@@ -263,7 +263,7 @@ is $dvd_item->tags_rs->count, 2, "remove several: DVD item has 2 tags";
 # doint this 2 times to test identical behaviour
 $tag_ids = [2,4];
 %updates = (
-	id => $dvd_item->id,
+	dvd_id => $dvd_item->id,
 	tags => $tag_ids,
 );
 
@@ -338,7 +338,7 @@ is $tag_item->dvds_rs->count, 2, "remove one: tag item has 2 dvds";
 %updates = (
 	id => $tag_item->id,
 	dvds => [
-            (map { { name => $_->name, id => $_->id } } $tag_item->dvds->all) ,
+            (map { { name => $_->name, dvd_id => $_->id } } $tag_item->dvds->all) ,
             { name => "winnie", owner => 1 },
             { name => "fanny" , owner => 1},
             { name => "sammy" , owner => 1},

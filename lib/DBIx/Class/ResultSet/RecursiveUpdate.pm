@@ -76,9 +76,6 @@ sub recursive_update {
         my @pks = map { $updates->{$_} } @pks;
         $object = $self->find( @pks, { key => 'primary' } );
     }
-    elsif ( !defined $object && exists $updates->{id} ) {
-        $object = $self->find( $updates->{id}, { key => 'primary' } );
-    }
 
     my %fixed_fields = map { $_ => 1 } @$fixed_fields
         if $fixed_fields;
