@@ -100,6 +100,14 @@ sub recursive_update {
         $object = $self->find( $updates, { key => 'primary' } );
     }
 
+    # try to construct a new row object with all given update attributes
+    # and use it to find the row in the database
+    if ( !defined $object ) {
+        try {
+            $object = $self->new_result($updates)->get_from_storage;
+        };
+    }
+
     $object = $self->new_result( {} )
         unless defined $object;
 
