@@ -1,6 +1,8 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
+
+0.32      2014-01-20 19:15:29+01:00 Europe/Vienna
     - 'id' can't be used any more as an alias for the primary key column name
       as DBIx::Class doesn't treat it special
     - Try to construct a new row object with all given update attributes and
