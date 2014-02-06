@@ -529,6 +529,12 @@ sub _master_relation_cond {
             return _inner( $source, $new_cond, @foreign_ids );
         }
     }
+
+    # we have a custom join condition, so update afterward
+    elsif ( ref $cond eq 'CODE' ) {
+        return 0;
+    }
+
     else {
         $source->throw_exception( "unhandled relation condition " . ref($cond) );
     }
