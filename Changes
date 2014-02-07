@@ -2,9 +2,10 @@ Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
 
-0.33      2014-02-06 14:58:54 America/New_York
+0.34 2014-02-07
+    - More changes to support custom CODE relationship condition
 
-0.33  2014-02-06
+0.33      2014-02-06 14:58:54 America/New_York
     - Don't die on custom CODE relationship condition
 
 0.32      2014-01-20 19:15:29+01:00 Europe/Vienna
