@@ -299,8 +299,14 @@ sub _update_relation {
     # custom code conditions yet. This needs tests.
     my @rel_cols;
     if ( ref $info->{cond} eq 'CODE' ) {
-        @rel_cols = keys %$resolved;
-        map { s/^me\.// } @rel_cols;
+        my $new_resolved;
+        # remove 'me.' from keys in returned hashref
+        while ( my ( $key, $value ) = each  %$resolved ) {
+            $key =~ s/^me\.//;
+            $new_resolved->{$key} = $value;
+            push @rel_cols, $key;
+        }
+        $resolved = $new_resolved;
     }
     else {
         @rel_cols = keys %{ $info->{cond} };
