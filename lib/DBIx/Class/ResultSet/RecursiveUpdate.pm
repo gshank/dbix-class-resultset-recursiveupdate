@@ -379,7 +379,7 @@ sub _update_relation {
         }
 
         if ( $if_not_submitted eq 'delete' ) {
-            $rs_rel_delist->delete;
+            $rs_rel_delist->delete_all;
         }
         elsif ( $if_not_submitted eq 'set_to_null' ) {
             my %update = map { $_ => undef } @rel_cols;
