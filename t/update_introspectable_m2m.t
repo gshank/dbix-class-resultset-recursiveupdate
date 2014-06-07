@@ -397,4 +397,54 @@ is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "remove all: update e
 
 is $tag_item->dvds_rs->count, 0, "remove all: tag item has no dvds";
 
+
+#
+# many_to_many and $foreign_rel ne $fk_column
+#
+
+{
+    require DBICTest;
+    my $schema = DBICTest->init_schema();
+
+    # prepare
+
+    my $artist = $schema->resultset('Artist')->search( undef, { order_by => 'artistid' } )->first;
+    ok $artist;
+
+    is $artist->artworks->count, 0;
+
+    my @cds = $artist->cds;
+    is @cds, 3;
+
+    my @artworks = map { $_->create_related('artwork', {}) } @cds;
+    is @artworks, 3;
+
+    is $artist->artworks->count, 0;
+    $artist->set_artworks( [ $artworks[0], $artworks[1] ] );
+    is $artist->artworks->count, 2;
+
+    is_deeply( [ sort $artist->artworks->get_column('cd_id')->all ], [ sort $artworks[0]->id, $artworks[1]->id ] );
+
+    # update ( m2m_force_set_rel => 1 )
+
+    DBIx::Class::ResultSet::RecursiveUpdate::Functions::recursive_update(
+        resultset         => $schema->resultset('Artist'),
+        updates           => { artworks => [ $artworks[0]->id, $artworks[2]->id ] },
+        object            => $artist,
+        m2m_force_set_rel => 1,
+    );
+
+    is_deeply( [ sort $artist->artworks->get_column('cd_id')->all ], [ sort $artworks[0]->id, $artworks[2]->id ] );
+
+    # update ( m2m_force_set_rel => 0 )
+
+    DBIx::Class::ResultSet::RecursiveUpdate::Functions::recursive_update(
+        resultset         => $schema->resultset('Artist'),
+        updates           => { artworks => [ $artworks[1]->id, $artworks[2]->id ] },
+        object            => $artist,
+    );
+
+    is_deeply( [ sort $artist->artworks->get_column('cd_id')->all ], [ sort $artworks[1]->id, $artworks[2]->id ] );
+}
+
 done_testing;

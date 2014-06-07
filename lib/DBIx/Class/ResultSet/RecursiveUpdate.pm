@@ -158,18 +158,22 @@ sub recursive_update {
                 my $meta        = $source->result_class->_m2m_metadata->{$name};
                 my $bridge_rel  = $meta->{relation};
                 my $foreign_rel = $meta->{foreign_relation};
+                my $fk_column   = _get_m2m_fk_column($source, $bridge_rel, $foreign_rel);
 
-                $post_updates{$bridge_rel} = [
-                    map {
-                        { $foreign_rel => $_ }
-                        } @{ $updates->{$name} }
-                ];
+                if ($fk_column) {
+                    $post_updates{$bridge_rel} = [
+                        map {
+                            { $fk_column => $_ }
+                            } @{ $updates->{$name} }
+                    ];
+
+                    next;
+                }
             }
+
             # Fall back to set_$rel if IntrospectableM2M
             # is not available. (removing and re-adding all relationships)
-            else {
-                $m2m_accessors{$name} = $updates->{$name};
-            }
+            $m2m_accessors{$name} = $updates->{$name};
 
             next;
         }
@@ -559,6 +563,23 @@ sub _master_relation_cond {
         $source->throw_exception( "unhandled relation condition " . ref($cond) );
     }
     return;
+}
+
+sub _get_m2m_fk_column {
+    my ($source, $bridge_rel, $foreign_rel) = @_;
+
+    my $info = $source->related_source($bridge_rel)->relationship_info($foreign_rel);
+
+    return if ref $info->{cond} eq 'CODE';
+
+    my @rel_cols = keys %{ $info->{cond} };
+
+    return unless @rel_cols == 1;
+
+    my $fk_column = $info->{cond}{$rel_cols[0]};
+    $fk_column =~ s/^self\.//;
+
+    return $fk_column;
 }
 
 1;

@@ -2,6 +2,7 @@ package # hide from PAUSE
     DBICTest::Schema::Artist;
 
 use base 'DBIx::Class::Core';
+__PACKAGE__->load_components(qw/IntrospectableM2M Core/);
 
 __PACKAGE__->table('artist');
 __PACKAGE__->source_info({
