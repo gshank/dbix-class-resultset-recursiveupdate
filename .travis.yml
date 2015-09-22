@@ -21,6 +21,8 @@ install:
      - cpanm --quiet --notest --installdeps .
      - cpanm -quiet --notest Test::Trap
      - cpanm -quiet --notest  DBIx::Class::Schema
+     - cpanm -quiet --notest  Pod::Coverage::TrustPod
+     - cpanm -quiet --notest  Test::Synopsis
 
 script:
      - PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine prove -lrsv t
