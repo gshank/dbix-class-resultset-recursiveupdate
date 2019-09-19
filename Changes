@@ -1,6 +1,8 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
+    - Don't try to find a row by primary key if not all primary key columns are
+      defined
 
 0.34      2014-02-06 23:37:32 America/New_York
     - More changes to support custom CODE relationship condition

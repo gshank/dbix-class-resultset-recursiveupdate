@@ -73,7 +73,7 @@ sub recursive_update {
 
     my @pks = $source->primary_columns;
     if ( !defined $object &&
-        all { exists $updates->{$_} } @pks ) {
+        all { exists $updates->{$_} && defined $updates->{$_} } @pks ) {
         my @pks = map { $updates->{$_} } @pks;
         $object = $self->find( @pks, { key => 'primary' } );
     }
