@@ -63,6 +63,8 @@ qr/No such column, relationship, many-to-many helper accessor or generic accesso
 }
 
 {
+    my $debug = $user_rs->result_source->storage->debug;
+    $user_rs->result_source->storage->debug(0);
 
     # try to create with a not existing rel but suppressed warning
     my $updates = {
@@ -79,6 +81,7 @@ qr/No such column, relationship, many-to-many helper accessor or generic accesso
     "",
 "nonexisting column, accessor, relationship doesn't warn with unknown_params_ok";
     $expected_user_count++;
+    $user_rs->result_source->storage->debug($debug);
     is( $user_rs->count, $expected_user_count, 'User created' );
 }
 
