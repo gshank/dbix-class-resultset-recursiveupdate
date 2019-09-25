@@ -119,6 +119,9 @@ sub recursive_update {
         DEBUG and warn "find by pk with fixed_fields\n";
         $object = $self->find( $updates, { key => 'primary' } );
     }
+    else {
+        DEBUG and warn 'missing: ' . join(', ', @missing) . "\n";
+    }
 
     # add the resolved columns to the updates hashref
     $updates = { %$updates, %$resolved };
@@ -131,6 +134,9 @@ sub recursive_update {
         DEBUG and warn "find by pk with resolved columns\n";
         $object = $self->find( $updates, { key => 'primary' } );
     }
+    else {
+        DEBUG and warn 'missing: ' . join(', ', @missing) . "\n";
+    }
 
     # try to construct a new row object with all given update attributes
     # and use it to find the row in the database
@@ -141,8 +147,10 @@ sub recursive_update {
         };
     }
 
-    $object = $self->new_result( {} )
-        unless defined $object;
+    unless (defined $object) {
+        DEBUG and warn "create new row\n";
+        $object = $self->new_result( {} );
+    }
 
     # direct column accessors
     my %columns;
