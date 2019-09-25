@@ -45,7 +45,7 @@ $queries->test({
         select => 1,
         update => 1,
     },
-});
+}, 'expected queries without cache');
 
 
 my $rs_users_with_cache = $rs_users->search_rs({
@@ -53,7 +53,8 @@ my $rs_users_with_cache = $rs_users->search_rs({
 }, {
     cache => 1,
 });
-# populate cache
+
+diag("populate cache");
 $rs_users_with_cache->all;
 
 $queries->run(sub {
@@ -66,6 +67,6 @@ $queries->test({
     usr => {
         update => 1,
     },
-});
+}, 'expected queries with cache');
 
 done_testing;
