@@ -81,6 +81,25 @@ sub recursive_update {
     }
 
     my @pks = $source->primary_columns;
+    my %pk_kvs;
+    for my $colname (@pks) {
+        if (exists $updates->{$colname} && defined $updates->{$colname}) {
+            $pk_kvs{$colname} = $updates->{$colname};
+            next;
+        }
+        $pk_kvs{$colname} = $resolved->{$colname}
+            if exists $resolved->{$colname} && defined $resolved->{$colname};
+    }
+
+    # check if row can be found in resultset cache
+    if ( !defined $object ) {
+        my $cached_rows = $self->get_cache;
+        if (defined $cached_rows) {
+            DEBUG and warn "find in cache\n";
+            $object = _get_matching_row(\%pk_kvs, $cached_rows)
+        }
+    }
+
     if ( !defined $object &&
         all { exists $updates->{$_} && defined $updates->{$_} } @pks ) {
         my @pks = map { $updates->{$_} } @pks;
@@ -281,6 +300,37 @@ sub _get_columns_by_accessor {
         $columns{ $info->{accessor} || $name } = $info;
     }
     return %columns;
+}
+
+sub _get_matching_row {
+    my ($kvs, $rows) = @_;
+
+    return
+        unless defined $rows;
+
+    croak 'key/value need to be a hashref'
+        unless ref $kvs eq 'HASH';
+
+    croak 'rows need to be an arrayref'
+        unless ref $rows eq 'ARRAY';
+
+    my $matching_row;
+
+    my @matching_rows;
+    for my $row (@$rows) {
+        push @matching_rows, $row
+            if all { $kvs->{$_} eq $row->$_ }
+                grep { !ref $kvs->{$_} }
+                keys %$kvs;
+    }
+    DEBUG and warn "multiple matching rows: " . scalar @matching_rows . "\n"
+        if @matching_rows > 1;
+    $matching_row = $matching_rows[0]
+        if scalar @matching_rows == 1;
+    DEBUG and warn "matching row found\n"
+        if defined $matching_row;
+
+    return $matching_row;
 }
 
 # Arguments: $rs, $name, $updates, $row, $if_not_submitted
