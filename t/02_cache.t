@@ -18,7 +18,7 @@ my $user = $rs_users->create({
   password   => 'cache username',
 });
 
-$schema->resultset('Dvd')->create({
+my $dvd = $schema->resultset('Dvd')->create({
     name => 'existing DVD',
     owner => $user->id,
     dvdtags => [{
@@ -68,5 +68,50 @@ $queries->test({
         update => 1,
     },
 }, 'expected queries with cache');
+
+$rs_users_with_cache = $rs_users->search_rs({
+    'me.id' => $user->id
+}, {
+    prefetch => {
+        owned_dvds => {
+            'dvdtags' => 'tag'
+        }
+    },
+    cache => 1,
+});
+
+diag("populate cache");
+$rs_users_with_cache->all;
+
+$queries->run(sub {
+    $rs_users_with_cache->recursive_update({
+        id => $user->id,
+        owned_dvds => [
+            {
+                dvd_id => $dvd->id,
+                name => 'existing DVD',
+            },
+            {
+                name => 'new DVD',
+            }
+        ]
+    });
+});
+$queries->test({
+    usr => {
+        # discard_changes for post_updates
+        select => 1,
+    },
+    dvd => {
+        insert => 1,
+        # one by 'find by pk' of the existing DVD
+        # one by 'find using get_from_storage' of the new DVD
+        # one by the discard_changes call for created rows
+        select => 3,
+        # this is the cleanup query which deletes all dvds of the user not
+        # passed to owned_dvds even if there aren't any
+        delete => 1,
+    },
+}, 'expected queries with relationships and cache');
 
 done_testing;
