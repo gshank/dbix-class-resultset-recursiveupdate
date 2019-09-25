@@ -103,6 +103,7 @@ sub recursive_update {
     if ( !defined $object &&
         all { exists $updates->{$_} && defined $updates->{$_} } @pks ) {
         my @pks = map { $updates->{$_} } @pks;
+        DEBUG and warn "find by pk\n";
         $object = $self->find( @pks, { key => 'primary' } );
     }
 
@@ -115,6 +116,7 @@ sub recursive_update {
         grep { !defined $updates->{$_} && !exists $fixed_fields{$_} } @pks;
 
     if ( !defined $object && scalar @missing == 0 ) {
+        DEBUG and warn "find by pk with fixed_fields\n";
         $object = $self->find( $updates, { key => 'primary' } );
     }
 
@@ -126,6 +128,7 @@ sub recursive_update {
     @missing = grep { !defined $resolved->{$_} } @missing;
 
     if ( !defined $object && scalar @missing == 0 ) {
+        DEBUG and warn "find by pk with resolved columns\n";
         $object = $self->find( $updates, { key => 'primary' } );
     }
 
@@ -133,6 +136,7 @@ sub recursive_update {
     # and use it to find the row in the database
     if ( !defined $object ) {
         try {
+            DEBUG and warn "find using get_from_storage\n";
             $object = $self->new_result($updates)->get_from_storage;
         };
     }
@@ -244,8 +248,10 @@ sub recursive_update {
     # this is needed to populate all columns in the row object because
     # otherwise _resolve_condition in _update_relation fails if a foreign key
     # column isn't loaded
-    $object->discard_changes
-        if not $in_storage;
+    if (not $in_storage) {
+        DEBUG and warn "discard_changes for created row\n";
+        $object->discard_changes;
+    }
 
     # updating many_to_many
     for my $name ( keys %m2m_accessors ) {
@@ -287,6 +293,7 @@ sub recursive_update {
     for my $name ( keys %post_updates ) {
         # I'm not sure why the following is necessary, but sometimes we get here
         # and the $object doesn't have a pk, and discard_changes must be executed
+        DEBUG and warn "discard_changes for post_updates\n";
         $object->discard_changes;
         _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted );
     }
