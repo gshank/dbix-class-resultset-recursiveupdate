@@ -239,8 +239,13 @@ sub recursive_update {
     # do the recursion ourselves
     # $object->{_rel_in_storage} = 1;
     # Update if %other_methods because of possible custom update method
+    my $in_storage = $object->in_storage;
     $object->update_or_insert if ( $object->is_changed || keys %other_methods );
-    $object->discard_changes;
+    # this is needed to populate all columns in the row object because
+    # otherwise _resolve_condition in _update_relation fails if a foreign key
+    # column isn't loaded
+    $object->discard_changes
+        if not $in_storage;
 
     # updating many_to_many
     for my $name ( keys %m2m_accessors ) {

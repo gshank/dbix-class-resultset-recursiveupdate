@@ -42,7 +42,7 @@ $queries->run(sub {
 });
 $queries->test({
     usr => {
-        select => 2,
+        select => 1,
         update => 1,
     },
 });
@@ -64,7 +64,6 @@ $queries->run(sub {
 });
 $queries->test({
     usr => {
-        select => 1,
         update => 1,
     },
 });
