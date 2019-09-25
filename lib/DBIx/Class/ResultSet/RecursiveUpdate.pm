@@ -42,6 +42,8 @@ use Scalar::Util qw( blessed );
 use List::MoreUtils qw/ any all/;
 use Try::Tiny;
 
+use constant DEBUG => 1;
+
 sub recursive_update {
     my %params = @_;
     my ( $self, $updates, $fixed_fields, $object, $resolved, $if_not_submitted,
@@ -62,6 +64,13 @@ sub recursive_update {
 
     croak 'fixed fields needs to be an arrayref'
         if defined $fixed_fields && ref $fixed_fields ne 'ARRAY';
+
+    DEBUG and warn "recursive_update: " . $source->name . "\n";
+    DEBUG and warn "object passed, skipping find" .
+        (defined $object->id
+        ? " (id " . $object->id . ")\n"
+        : "\n")
+        if defined $object;
 
     # always warn about additional parameters if storage debugging is enabled
     $unknown_params_ok = 0
@@ -126,8 +135,11 @@ sub recursive_update {
     my %m2m_accessors;
     my %columns_by_accessor = _get_columns_by_accessor($self);
 
+    # this section determines to what each key/value pair maps to,
+    # column or relationship
     for my $name ( keys %$updates ) {
-
+        DEBUG and warn "updating $name to "
+            . ($updates->{$name} // '[undef]') . "\n";
         # columns
         if ( exists $columns_by_accessor{$name} &&
             !( $source->has_relationship($name) && ref( $updates->{$name} ) ) ) {
@@ -149,6 +161,7 @@ sub recursive_update {
 
         # many-to-many helper accessors
         if ( is_m2m( $self, $name ) ) {
+            DEBUG and warn "is m2m\n";
             # Transform m2m data into recursive has_many data
             # if IntrospectableM2M is in use.
             #
@@ -212,6 +225,7 @@ sub recursive_update {
 
     # updating many_to_many
     for my $name ( keys %m2m_accessors ) {
+        DEBUG and warn "updating m2m $name\n";
         my $value = $m2m_accessors{$name};
 
         # TODO: only first pk col is used
@@ -278,6 +292,8 @@ sub _update_relation {
     $object->throw_exception("No such relationship '$name'")
         unless $object->has_relationship($name);
 
+    DEBUG and warn "_update_relation: $name\n";
+
     my $info = $object->result_source->relationship_info($name);
     my $attrs = $info->{attrs};
 
@@ -326,6 +342,7 @@ sub _update_relation {
 
     # the only valid datatype for a has_many rels is an arrayref
     if ( $attrs->{accessor} eq 'multi' ) {
+        DEBUG and warn "has_many: $name\n";
 
         # handle undef like empty arrayref
         $updates = []
@@ -351,6 +368,7 @@ sub _update_relation {
 
         # foreign table has a single pk column
         if ( scalar @related_pks == 1 ) {
+            DEBUG and warn "in not_in\n";
             $rs_rel_delist = $rs_rel_delist->search_rs(
                 {
                     $self->current_source_alias . "." .
