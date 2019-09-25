@@ -98,10 +98,6 @@ $queries->run(sub {
     });
 });
 $queries->test({
-    usr => {
-        # discard_changes for post_updates
-        select => 1,
-    },
     dvd => {
         insert => 1,
         # one by 'find by pk' of the existing DVD

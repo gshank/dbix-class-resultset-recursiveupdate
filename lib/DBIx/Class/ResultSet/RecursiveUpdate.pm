@@ -265,10 +265,6 @@ sub recursive_update {
         $object->$set_meth( \@rows );
     }
     for my $name ( keys %post_updates ) {
-        # I'm not sure why the following is necessary, but sometimes we get here
-        # and the $object doesn't have a pk, and discard_changes must be executed
-        DEBUG and warn "discard_changes for post_updates\n";
-        $object->discard_changes;
         _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted );
     }
     delete $ENV{DBIC_NULLABLE_KEY_NOWARN};
