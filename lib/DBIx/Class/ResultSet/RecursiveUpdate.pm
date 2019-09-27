@@ -310,7 +310,7 @@ sub _get_matching_row {
     my @matching_rows;
     for my $row (@$rows) {
         push @matching_rows, $row
-            if all { $kvs->{$_} eq $row->$_ }
+            if all { $kvs->{$_} eq $row->get_column($_) }
                 grep { !ref $kvs->{$_} }
                 keys %$kvs;
     }
@@ -401,9 +401,23 @@ sub _update_relation {
             DEBUG and warn "getting related rows\n";
             @related_rows = $object->$name;
         }
+        my @pks = $related_resultset->result_source->primary_columns;
 
         for my $sub_updates ( @{$updates} ) {
-            my $object = _get_matching_row($sub_updates, \@related_rows);
+            DEBUG and warn "processing related row\n";
+            my %pk_kvs;
+            for my $colname (@pks) {
+                if (exists $sub_updates->{$colname} && defined $sub_updates->{$colname}) {
+                    $pk_kvs{$colname} = $sub_updates->{$colname};
+                    next;
+                }
+                $pk_kvs{$colname} = $resolved->{$colname}
+                    if exists $resolved->{$colname} && defined $resolved->{$colname};
+            }
+            my $object;
+            if ( scalar keys %pk_kvs == scalar @pks ) {
+                $object = _get_matching_row({ %pk_kvs, %$resolved }, \@related_rows);
+            }
 
             my $sub_object = recursive_update(
                 resultset => $related_resultset,
