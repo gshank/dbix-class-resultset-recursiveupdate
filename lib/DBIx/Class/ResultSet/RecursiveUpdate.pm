@@ -416,7 +416,7 @@ sub _update_relation {
             }
             my $object;
             if ( scalar keys %pk_kvs == scalar @pks ) {
-                $object = _get_matching_row({ %pk_kvs, %$resolved }, \@related_rows);
+                $object = _get_matching_row(\%pk_kvs, \@related_rows);
             }
             # pass an empty object if no related row found to prevent the
             # find by pk in recursive_update to happen
