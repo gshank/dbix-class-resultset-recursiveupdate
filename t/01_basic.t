@@ -221,6 +221,8 @@ my $dvd_without_tags =
 is( $dvd_without_tags->tags->count,
     0, 'Tags deleted when m2m accessor set to undef' );
 
+# this test passes a new value for the pk column dvd_name in the updates hash
+# and expects that the resolved dvd_name is used for the update
 $new_dvd->update( { name => 'New Test Name' } );
 $updates = {
     dvd_id => $new_dvd->dvd_id,
