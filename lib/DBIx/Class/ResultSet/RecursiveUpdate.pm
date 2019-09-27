@@ -317,7 +317,8 @@ sub _get_matching_row {
         if @matching_rows > 1;
     $matching_row = $matching_rows[0]
         if scalar @matching_rows == 1;
-    DEBUG and warn "matching row found\n"
+    DEBUG and warn "matching row found for: " . Dumper($kvs) . " in " .
+        Dumper([map { { $_->get_columns } } @$rows]) . "\n"
         if defined $matching_row;
     DEBUG and warn "matching row not found for: " . Dumper($kvs) . " in " .
         Dumper([map { { $_->get_columns } } @$rows]) . "\n"
