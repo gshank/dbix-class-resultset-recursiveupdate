@@ -149,11 +149,9 @@ $queries->test({
         # one for tag 3 of 'existing DVD'
         # two for tags 2 and 3 of 'new DVD'
         insert => 3,
-        # one for the check for the new tag 3 of 'existing DVD'
         # one from the discard_changes call for created tag 3 of 'existing DVD'
-        # two for the check for the two new tags of 'new DVD'
         # two from the discard_changes call for created tags of 'new DVD'
-        select => 6,
+        select => 3,
         # this is the cleanup query which deletes all tags of a dvd not
         # passed to tags even if there aren't any
         delete => 2,
