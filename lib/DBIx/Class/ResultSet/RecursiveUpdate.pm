@@ -209,7 +209,7 @@ sub recursive_update {
         $object->$name( $other_methods{$name} );
     }
     for my $name ( keys %pre_updates ) {
-        _update_relation( $self, $name, $pre_updates{$name}, $object, $if_not_submitted );
+        _update_relation( $self, $name, $pre_updates{$name}, $object, $if_not_submitted, 0 );
     }
 
     # $self->_delete_empty_auto_increment($object);
@@ -265,7 +265,7 @@ sub recursive_update {
         $object->$set_meth( \@rows );
     }
     for my $name ( keys %post_updates ) {
-        _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted );
+        _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted, $in_storage );
     }
     delete $ENV{DBIC_NULLABLE_KEY_NOWARN};
     return $object;
@@ -315,9 +315,9 @@ sub _get_matching_row {
     return $matching_row;
 }
 
-# Arguments: $rs, $name, $updates, $row, $if_not_submitted
+# Arguments: $rs, $name, $updates, $row, $if_not_submitted, $row_existed
 sub _update_relation {
-    my ( $self, $name, $updates, $object, $if_not_submitted ) = @_;
+    my ( $self, $name, $updates, $object, $if_not_submitted, $row_existed ) = @_;
 
     # this should never happen because we're checking the paramters passed to
     # recursive_update, but just to be sure...
@@ -383,9 +383,12 @@ sub _update_relation {
             unless ref $updates eq 'ARRAY';
 
         my @updated_objs;
-
-        DEBUG and warn "getting related rows\n";
-        my @related_rows = $object->$name;
+        my @related_rows;
+        # newly created rows can't have related rows
+        if ($row_existed) {
+            DEBUG and warn "getting related rows\n";
+            @related_rows = $object->$name;
+        }
 
         for my $sub_updates ( @{$updates} ) {
             my $object = _get_matching_row($sub_updates, \@related_rows);
