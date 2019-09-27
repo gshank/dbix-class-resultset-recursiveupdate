@@ -93,7 +93,7 @@ sub recursive_update {
     }
 
     # check if row can be found in resultset cache
-    if ( !defined $object ) {
+    if ( !defined $object && scalar keys %pk_kvs == scalar @pks ) {
         my $cached_rows = $self->get_cache;
         if (defined $cached_rows) {
             DEBUG and warn "find in cache\n";
