@@ -41,6 +41,7 @@ use Carp::Clan qw/^DBIx::Class|^HTML::FormHandler|^Try::Tiny/;
 use Scalar::Util qw( blessed );
 use List::MoreUtils qw/ any all/;
 use Try::Tiny;
+use Data::Dumper::Concise;
 
 use constant DEBUG => 1;
 
@@ -296,6 +297,11 @@ sub _get_matching_row {
     croak 'rows need to be an arrayref'
         unless ref $rows eq 'ARRAY';
 
+    unless ($rows) {
+        DEBUG and warn "skipping because no rows passed\n";
+        return;
+    }
+
     my $matching_row;
 
     my @matching_rows;
@@ -311,6 +317,9 @@ sub _get_matching_row {
         if scalar @matching_rows == 1;
     DEBUG and warn "matching row found\n"
         if defined $matching_row;
+    DEBUG and warn "matching row not found for: " . Dumper($kvs) . " in " .
+        Dumper([map { { $_->get_columns } } @$rows]) . "\n"
+        unless defined $matching_row;
 
     return $matching_row;
 }
