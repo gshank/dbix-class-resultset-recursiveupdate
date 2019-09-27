@@ -100,9 +100,8 @@ $queries->run(sub {
 $queries->test({
     dvd => {
         insert => 1,
-        # one by 'find by pk' of the existing DVD
         # one by the discard_changes call for created rows
-        select => 2,
+        select => 1,
         # this is the cleanup query which deletes all dvds of the user not
         # passed to owned_dvds even if there aren't any
         delete => 1,

@@ -384,11 +384,18 @@ sub _update_relation {
 
         my @updated_objs;
 
+        DEBUG and warn "getting related rows\n";
+        my @related_rows = $object->$name;
+
         for my $sub_updates ( @{$updates} ) {
+            my $object = _get_matching_row($sub_updates, \@related_rows);
+
             my $sub_object = recursive_update(
                 resultset => $related_resultset,
                 updates   => $sub_updates,
-                resolved  => $resolved
+                resolved  => $resolved,
+                # pass prefetched object if found
+                object    => $object,
             );
 
             push @updated_objs, $sub_object;
