@@ -103,8 +103,7 @@ sub recursive_update {
 
     $updates = { %$updates, %$resolved };
 
-    my %fixed_fields = map { $_ => 1 } @$fixed_fields
-        if $fixed_fields;
+    my %fixed_fields = map { $_ => 1 } @$fixed_fields;
 
     # add the resolved columns to the updates hashref
     my %all_pks = ( %pk_kvs, %fixed_fields );
