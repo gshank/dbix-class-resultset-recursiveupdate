@@ -90,11 +90,9 @@ $queries->run(sub {
             {
                 dvd_id => $dvd->id,
                 name => 'existing DVD',
-                tags => [ 1, 3 ],
             },
             {
                 name => 'new DVD',
-                tags => [ 2, 3 ],
             }
         ]
     });
@@ -104,6 +102,45 @@ $queries->test({
         insert => 1,
         # one by the discard_changes call for created rows
         select => 1,
+        # this is the cleanup query which deletes all dvds of the user not
+        # passed to owned_dvds even if there aren't any
+        delete => 1,
+    },
+}, 'expected queries with has_many relationship and cache');
+
+$rs_users_with_cache = $rs_users->search_rs({
+    'me.id' => $user->id
+}, {
+    prefetch => {
+        owned_dvds => {
+            'dvdtags' => 'tag'
+        }
+    },
+    cache => 1,
+});
+
+diag("populate cache");
+$rs_users_with_cache->all;
+
+ok (my $new_dvd = $user->owned_dvds->find({ name => 'new DVD'}), 'new DVD found');
+
+$queries->run(sub {
+    $rs_users_with_cache->recursive_update({
+        id => $user->id,
+        owned_dvds => [
+            {
+                dvd_id => $dvd->id,
+                tags => [ 1, 3 ],
+            },
+            {
+                dvd_id => $new_dvd->id,
+                tags => [ 2, 3 ],
+            }
+        ]
+    });
+});
+$queries->test({
+    dvd => {
         # this is the cleanup query which deletes all dvds of the user not
         # passed to owned_dvds even if there aren't any
         delete => 1,
@@ -121,6 +158,6 @@ $queries->test({
         # passed to tags even if there aren't any
         delete => 2,
     },
-}, 'expected queries with relationships and cache');
+}, 'expected queries with many_to_many relationship helper and cache');
 
 done_testing;
