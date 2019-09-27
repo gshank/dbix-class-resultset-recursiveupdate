@@ -407,6 +407,7 @@ sub _update_relation {
             DEBUG and warn "updating related row\n";
             my %pk_kvs;
             for my $colname (@pks) {
+                DEBUG and warn "$colname\n";
                 if (exists $sub_updates->{$colname} && defined $sub_updates->{$colname}) {
                     $pk_kvs{$colname} = $sub_updates->{$colname};
                     next;
@@ -417,11 +418,17 @@ sub _update_relation {
             my $object;
             if ( scalar keys %pk_kvs == scalar @pks ) {
                 $object = _get_matching_row(\%pk_kvs, \@related_rows);
+                # the lookup can fail if the primary key of a currently not
+                # related row is passed in the updates hash
+                # in this case we don't pass an object to recursive_update
+                # to let it find the row
             }
-            # pass an empty object if no related row found to prevent the
-            # find by pk in recursive_update to happen
-            $object = $related_resultset->new_result({})
-                unless defined $object;
+            else {
+                # pass an empty object if no related row found to prevent the
+                # find by pk in recursive_update to happen
+                $object = $related_resultset->new_result({})
+                    unless defined $object;
+            }
 
             my $sub_object = recursive_update(
                 resultset => $related_resultset,
