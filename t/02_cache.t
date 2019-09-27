@@ -90,9 +90,11 @@ $queries->run(sub {
             {
                 dvd_id => $dvd->id,
                 name => 'existing DVD',
+                tags => [ 1, 3 ],
             },
             {
                 name => 'new DVD',
+                tags => [ 2, 3 ],
             }
         ]
     });
@@ -105,6 +107,20 @@ $queries->test({
         # this is the cleanup query which deletes all dvds of the user not
         # passed to owned_dvds even if there aren't any
         delete => 1,
+    },
+    dvdtag => {
+        # one for tag 3 of 'existing DVD'
+        # two for tags 2 and 3 of 'new DVD'
+        insert => 3,
+        # two for the check for the two tags of 'existing DVD'
+        # one from the discard_changes call for created tag 3 of 'existing DVD'
+        # one for getting related rows of created dvd 'new DVD'
+        # two for the check for the two tags of 'new DVD'
+        # two from the discard_changes call for created tags of 'new DVD'
+        select => 8,
+        # this is the cleanup query which deletes all tags of a dvd not
+        # passed to tags even if there aren't any
+        delete => 2,
     },
 }, 'expected queries with relationships and cache');
 
