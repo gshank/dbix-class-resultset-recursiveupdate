@@ -294,6 +294,9 @@ sub _get_matching_row {
     croak 'key/value need to be a hashref'
         unless ref $kvs eq 'HASH';
 
+    croak 'key/value needs to have at least one pair'
+        if keys %$kvs == 0;
+
     croak 'rows need to be an arrayref'
         unless ref $rows eq 'ARRAY';
 
