@@ -403,7 +403,7 @@ sub _update_relation {
         my @pks = $related_resultset->result_source->primary_columns;
 
         for my $sub_updates ( @{$updates} ) {
-            DEBUG and warn "processing related row\n";
+            DEBUG and warn "updating related row\n";
             my %pk_kvs;
             for my $colname (@pks) {
                 if (exists $sub_updates->{$colname} && defined $sub_updates->{$colname}) {
