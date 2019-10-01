@@ -492,7 +492,7 @@ sub _update_relation {
         if ( ref $updates ) {
             my $existing_row = 0;
             my @pks = $related_resultset->result_source->primary_columns;
-            if ( all { exists $updates->{$_} } @pks ) {
+            if ( all { exists $updates->{$_} && defined $updates->{$_} } @pks ) {
                 $existing_row = 1;
             }
             DEBUG and warn $existing_row ? "existing row\n" : "new row\n";
