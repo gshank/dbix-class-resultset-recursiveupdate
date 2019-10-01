@@ -373,7 +373,6 @@ sub _update_relation {
         map { s/^foreign\.// } @rel_cols;
     }
 
-
     # find out if all related columns are nullable
     my $all_fks_nullable = 1;
     for my $rel_col (@rel_cols) {
@@ -487,6 +486,8 @@ sub _update_relation {
     }
     elsif ( $attrs->{accessor} eq 'single' ||
         $attrs->{accessor} eq 'filter' ) {
+        DEBUG and warn "has_one, might_have, belongs_to (" .
+            $attrs->{accessor} . "): $name\n";
         my $sub_object;
         if ( ref $updates ) {
             my $existing_row = 0;
@@ -494,6 +495,7 @@ sub _update_relation {
             if ( all { exists $updates->{$_} } @pks ) {
                 $existing_row = 1;
             }
+            DEBUG and warn $existing_row ? "existing row\n" : "new row\n";
             if ( blessed($updates) && $updates->isa('DBIx::Class::Row') ) {
                 $sub_object = $updates;
             }
