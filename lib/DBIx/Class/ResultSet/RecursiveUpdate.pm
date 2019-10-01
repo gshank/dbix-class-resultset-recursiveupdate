@@ -406,28 +406,36 @@ sub _update_relation {
         for my $sub_updates ( @{$updates} ) {
             DEBUG and warn "updating related row\n";
             my %pk_kvs;
+            # detect the special case where the primary key of a currently not
+            # related row is passed in the updates hash
+            my $special_case_existing_non_related = 0;
             for my $colname (@pks) {
                 DEBUG and warn "$colname\n";
                 if (exists $sub_updates->{$colname} && defined $sub_updates->{$colname}) {
                     $pk_kvs{$colname} = $sub_updates->{$colname};
-                    next;
                 }
-                $pk_kvs{$colname} = $resolved->{$colname}
-                    if exists $resolved->{$colname} && defined $resolved->{$colname};
+                if (exists $resolved->{$colname}
+                    && defined $resolved->{$colname}) {
+                    if (not exists $pk_kvs{$colname}) {
+                        $pk_kvs{$colname} = $resolved->{$colname};
+                    }
+                    elsif ($sub_updates->{$colname} ne $resolved->{$colname}) {
+                        $special_case_existing_non_related = 1;
+                    }
+                }
             }
             my $object;
             if ( scalar keys %pk_kvs == scalar @pks ) {
-                $object = _get_matching_row(\%pk_kvs, \@related_rows);
                 # the lookup can fail if the primary key of a currently not
                 # related row is passed in the updates hash
-                # in this case we don't pass an object to recursive_update
-                # to let it find the row
+                $object = _get_matching_row(\%pk_kvs, \@related_rows);
             }
-            else {
-                # pass an empty object if no related row found to prevent the
-                # find by pk in recursive_update to happen
-                $object = $related_resultset->new_result({})
-                    unless defined $object;
+            # pass an empty object if no related row found and it's not the
+            # special case where the primary key of a currently not related
+            # row is passed in the updates hash to prevent the find by pk in
+            # recursive_update to happen
+            if (!defined $object && !$special_case_existing_non_related) {
+                $object = $related_resultset->new_result({});
             }
 
             my $sub_object = recursive_update(
