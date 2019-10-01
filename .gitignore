@@ -1,3 +1,4 @@
 DBIx-Class-ResultSet-RecursiveUpdate*
 t/var/
 /.build/
+/.idea/
