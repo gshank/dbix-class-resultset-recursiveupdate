@@ -32,9 +32,6 @@ eval {
             artist => { artistid => 2 }
         }
     );
-    # DBIx::Class set_from_related updates the foreign key column (artist)
-    # but doesn't update or invalidate the relationship cache
-    $updated_cd->discard_changes;
     is( $updated_cd->artist->id, 2, 'related artist changed correctly' );
 };
 is( $@, '', 'new cd created without clash on related artist' );

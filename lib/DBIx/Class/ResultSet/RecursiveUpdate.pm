@@ -534,7 +534,7 @@ sub _update_relation {
         # situations too, but until that's worked out, kludge it
         if ( ( $sub_object || $updates || $might_belong_to || $join_type eq 'LEFT' ) &&
              ref $info->{cond} ne 'CODE'  ) {
-            $object->set_from_related( $name, $sub_object );
+            $object->$name($sub_object);
         }
     }
     else {
