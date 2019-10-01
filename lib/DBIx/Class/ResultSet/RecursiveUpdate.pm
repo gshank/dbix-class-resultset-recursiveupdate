@@ -489,10 +489,10 @@ sub _update_relation {
         $attrs->{accessor} eq 'filter' ) {
         my $sub_object;
         if ( ref $updates ) {
-            my $no_new_object = 0;
+            my $existing_row = 0;
             my @pks = $related_resultset->result_source->primary_columns;
             if ( all { exists $updates->{$_} } @pks ) {
-                $no_new_object = 1;
+                $existing_row = 1;
             }
             if ( blessed($updates) && $updates->isa('DBIx::Class::Row') ) {
                 $sub_object = $updates;
@@ -503,14 +503,14 @@ sub _update_relation {
                 $sub_object = recursive_update(
                     resultset => $related_resultset,
                     updates   => $updates,
-                    $no_new_object ? () : (object => $object->$name),
+                    $existing_row ? () : (object => $object->$name),
                 );
             }
             else {
                 $sub_object = recursive_update(
                     resultset => $related_resultset,
                     updates   => $updates,
-                    $no_new_object ? () : (resolved  => $resolved),
+                    $existing_row ? () : (resolved => $resolved),
                 );
             }
         }
