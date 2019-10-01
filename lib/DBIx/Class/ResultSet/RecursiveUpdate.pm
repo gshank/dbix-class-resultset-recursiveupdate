@@ -408,21 +408,14 @@ sub _update_relation {
             my %pk_kvs;
             # detect the special case where the primary key of a currently not
             # related row is passed in the updates hash
-            my $special_case_existing_non_related = 0;
             for my $colname (@pks) {
-                DEBUG and warn "$colname\n";
                 if (exists $sub_updates->{$colname} && defined $sub_updates->{$colname}) {
                     $pk_kvs{$colname} = $sub_updates->{$colname};
+                    next;
                 }
-                if (exists $resolved->{$colname}
-                    && defined $resolved->{$colname}) {
-                    if (not exists $pk_kvs{$colname}) {
-                        $pk_kvs{$colname} = $resolved->{$colname};
-                    }
-                    elsif ($sub_updates->{$colname} ne $resolved->{$colname}) {
-                        $special_case_existing_non_related = 1;
-                    }
-                }
+                $pk_kvs{$colname} = $resolved->{$colname}
+                    if exists $resolved->{$colname}
+                        && defined $resolved->{$colname};
             }
             my $object;
             if ( scalar keys %pk_kvs == scalar @pks ) {
@@ -434,7 +427,8 @@ sub _update_relation {
             # special case where the primary key of a currently not related
             # row is passed in the updates hash to prevent the find by pk in
             # recursive_update to happen
-            if (!defined $object && !$special_case_existing_non_related) {
+            else {
+                DEBUG and warn "passing empty row to prevent find by pk\n";
                 $object = $related_resultset->new_result({});
             }
 
