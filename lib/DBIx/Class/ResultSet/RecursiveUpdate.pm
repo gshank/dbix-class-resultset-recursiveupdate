@@ -39,7 +39,7 @@ package DBIx::Class::ResultSet::RecursiveUpdate::Functions;
 
 use Carp::Clan qw/^DBIx::Class|^HTML::FormHandler|^Try::Tiny/;
 use Scalar::Util qw( blessed );
-use List::MoreUtils qw/ any all/;
+use List::MoreUtils qw/ any all none /;
 use Try::Tiny;
 use Data::Dumper::Concise;
 
@@ -400,7 +400,8 @@ sub _update_relation {
             DEBUG and warn "getting related rows\n";
             @related_rows = $object->$name;
         }
-        my @pks = $related_resultset->result_source->primary_columns;
+        my $related_result_source = $related_resultset->result_source;
+        my @pks = $related_result_source->primary_columns;
 
         for my $sub_updates ( @{$updates} ) {
             DEBUG and warn "updating related row\n";
@@ -416,11 +417,75 @@ sub _update_relation {
                     if exists $resolved->{$colname}
                         && defined $resolved->{$colname};
             }
-            my $object;
+            my $related_object;
+
+            # support the special case where a method on the related row
+            # populates one or more primary key columns and we don't have
+            # all primary key values already
+            # see DBSchema::Result::DVD relationship keysbymethod
+            DEBUG and warn "pk columns so far: " . join (', ',
+                sort keys %pk_kvs) . "\n";
+            my @non_pk_columns = grep {
+                    my $colname = $_;
+                    none { $colname eq $_ } keys %pk_kvs
+                }
+                sort keys %$sub_updates;
+            DEBUG and warn "non-pk columns: " . join (', ',
+                @non_pk_columns) . "\n";
+            if ( scalar keys %pk_kvs != scalar @pks && @non_pk_columns) {
+                DEBUG and warn "not all primary keys available, trying " .
+                    "object creation\n";
+                # new_result throws exception if non column values are passed
+                # because we want to also support e.g. a BUILDARGS method that
+                # populates primary key columns from an additional value
+                # filter out all relationships
+                my @non_rel_columns = grep {
+                        !is_m2m( $related_resultset, $_ )
+                        && !$related_result_source->has_relationship($_)
+                    }
+                    sort keys %$sub_updates;
+                my %non_rel_updates = map {
+                    $_ => $sub_updates->{$_}
+                } @non_rel_columns;
+                # transform columns specified by their accessor name
+                my %columns_by_accessor = _get_columns_by_accessor($related_resultset);
+                for my $accessor_name (sort keys %columns_by_accessor) {
+                    my $colname = $columns_by_accessor{$accessor_name}->{name};
+                    if ($accessor_name ne $colname
+                        && exists $non_rel_updates{$accessor_name}) {
+                        DEBUG and warn "renaming column accessor " .
+                            "'$accessor_name' to column name '$colname'\n";
+                        $non_rel_updates{$colname} = delete
+                            $non_rel_updates{$accessor_name};
+                    }
+                }
+                DEBUG and warn "using all non-rel updates for object " .
+                    "construction: " . Dumper(\%non_rel_updates);
+                my $related_row = $related_resultset
+                    ->new_result(\%non_rel_updates);
+                for my $colname (@pks) {
+                    next
+                        if exists $pk_kvs{$colname};
+
+                    if ($related_row->can($colname)
+                        && defined $related_row->$colname) {
+                        DEBUG and warn "missing pk column $colname exists " .
+                            "and defined on object\n";
+                        $pk_kvs{$colname} = $related_row->$colname;
+                    }
+                    else {
+                        DEBUG and warn "missing pk column $colname doesn't "
+                            . "exist or isn't defined on object, aborting\n";
+                        last;
+                    }
+                }
+            }
+
             if ( scalar keys %pk_kvs == scalar @pks ) {
+                DEBUG and warn "all primary keys available\n";
                 # the lookup can fail if the primary key of a currently not
                 # related row is passed in the updates hash
-                $object = _get_matching_row(\%pk_kvs, \@related_rows);
+                $related_object = _get_matching_row(\%pk_kvs, \@related_rows);
             }
             # pass an empty object if no related row found and it's not the
             # special case where the primary key of a currently not related
@@ -428,7 +493,7 @@ sub _update_relation {
             # recursive_update to happen
             else {
                 DEBUG and warn "passing empty row to prevent find by pk\n";
-                $object = $related_resultset->new_result({});
+                $related_object = $related_resultset->new_result({});
             }
 
             my $sub_object = recursive_update(
@@ -436,7 +501,7 @@ sub _update_relation {
                 updates   => $sub_updates,
                 resolved  => $resolved,
                 # pass prefetched object if found
-                object    => $object,
+                object    => $related_object,
             );
 
             push @updated_objs, $sub_object;

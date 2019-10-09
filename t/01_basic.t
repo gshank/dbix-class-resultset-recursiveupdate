@@ -364,4 +364,25 @@ is( $user->owned_dvds->count, 0, 'user owns no dvds' );
 is( $dvd_rs->search( { dvd_id => { -in => \@user_dvd_ids } } )->count,
     0, 'owned dvds deleted' );
 
+ok (my $dvd_with_keysbymethod = $dvd_rs->create({
+    name  => 'DVD with keys by method relationship',
+    owner => $user
+}), 'dvd for test created');
+$dvd_with_keysbymethod->add_to_keysbymethod({
+    key1  => 'foo',
+    key2  => 'bar',
+});
+is($dvd_with_keysbymethod->keysbymethod->first->combined_key, 'foo/bar',
+    'combined_key method returns correct value');
+
+ok( my $dvd_with_keysbymethod_updated = $dvd_rs->recursive_update({
+        dvd_id => $dvd_with_keysbymethod->id,
+        keysbymethod => [{
+            combined_key => 'foo/bar',
+            value        => 'baz',
+        }]
+    }),
+    'updating keysbymethod relationship ok'
+);
+
 done_testing;
