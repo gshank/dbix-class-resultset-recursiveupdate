@@ -195,7 +195,8 @@ sub recursive_update {
         # don't throw a warning instead of an exception to give users
         # time to adapt to the new API
         carp(
-            "No such column, relationship, many-to-many helper accessor or generic accessor '$name'"
+            "No such column, relationship, many-to-many helper accessor or " .
+            "generic accessor '$name' on '" . $source->name . "'"
         ) unless $unknown_params_ok;
 
     }
@@ -397,8 +398,8 @@ sub _update_relation {
         my @related_rows;
         # newly created rows can't have related rows
         if ($row_existed) {
-            DEBUG and warn "getting related rows\n";
             @related_rows = $object->$name;
+            DEBUG and warn "got related rows: " . scalar @related_rows . "\n";
         }
         my $related_result_source = $related_resultset->result_source;
         my @pks = $related_result_source->primary_columns;
@@ -513,7 +514,7 @@ sub _update_relation {
 
         # foreign table has a single pk column
         if ( scalar @related_pks == 1 ) {
-            DEBUG and warn "in not_in\n";
+            DEBUG and warn "delete in not_in\n";
             $rs_rel_delist = $rs_rel_delist->search_rs(
                 {
                     $self->current_source_alias . "." .
@@ -553,6 +554,7 @@ sub _update_relation {
         $attrs->{accessor} eq 'filter' ) {
         DEBUG and warn "has_one, might_have, belongs_to (" .
             $attrs->{accessor} . "): $name\n";
+
         my $sub_object;
         if ( ref $updates ) {
             my $existing_row = 0;
