@@ -837,6 +837,4 @@ diag $@ if $@;
     is( $cd->single_track, undef, 'Might have deleted' );
 }
 
-1;
-
 done_testing();
