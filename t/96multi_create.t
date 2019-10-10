@@ -807,7 +807,9 @@ diag $@ if $@;
 
 ## Test for the might_have is allowed empty bug (should check and see if this
 ## needs patching upstream to DBIC
-{
+TODO: {
+    todo_skip "DBIx::Class 0.082841 clears cdid primary key of CD after" .
+        "setting the first belongs_to relationship 'artwork'";
 
     use DBIx::Class::ResultSet::RecursiveUpdate;
 
@@ -835,6 +837,6 @@ diag $@ if $@;
     $cd->discard_changes;
 
     is( $cd->single_track, undef, 'Might have deleted' );
-}
+};
 
 done_testing();
