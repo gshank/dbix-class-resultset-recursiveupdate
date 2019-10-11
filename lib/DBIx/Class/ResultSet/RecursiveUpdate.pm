@@ -584,44 +584,54 @@ $_\n";
             push @updated_objs, $sub_object;
         }
 
-        my $rs_rel_delist = $object->$name;
+        # determine if a removal query is required
+        my @remove_rows = grep {
+            my $existing_row = $_;
+            none { $existing_row->ID eq $_->ID } @updated_objs
+        } @related_rows;
+        DEBUG and warn "rows for removal: " .  join(', ', map { $_->ID }
+            @remove_rows) . "\n";
 
-        # foreign table has a single pk column
-        if ( scalar @pks == 1 ) {
-            DEBUG and warn "delete in not_in\n";
-            $rs_rel_delist = $rs_rel_delist->search_rs(
-                {
-                    $self->current_source_alias . "." .
-                        $pks[0] => { -not_in => [ map ( $_->id, @updated_objs ) ] }
-                }
-            );
-        }
+        if (scalar @remove_rows) {
+            my $rs_rel_delist = $object->$name;
 
-        # foreign table has multiple pk columns
-        else {
-            my @cond;
-            for my $obj (@updated_objs) {
-                my %cond_for_obj;
-                for my $col (@pks) {
-                    $cond_for_obj{ $self->current_source_alias . ".$col" } =
-                        $obj->get_column($col);
-
-                }
-                push @cond, \%cond_for_obj;
+            # foreign table has a single pk column
+            if (scalar @pks == 1) {
+                DEBUG and warn "delete in not_in\n";
+                $rs_rel_delist = $rs_rel_delist->search_rs(
+                    {
+                        $self->current_source_alias . "." .
+                            $pks[0] => { -not_in => [ map ( $_->id, @updated_objs ) ] }
+                    }
+                );
             }
 
-            # only limit resultset if there are related rows left
-            if ( scalar @cond ) {
-                $rs_rel_delist = $rs_rel_delist->search_rs( { -not => [@cond] } );
-            }
-        }
+            # foreign table has multiple pk columns
+            else {
+                my @cond;
+                for my $obj (@updated_objs) {
+                    my %cond_for_obj;
+                    for my $col (@pks) {
+                        $cond_for_obj{ $self->current_source_alias . ".$col" } =
+                            $obj->get_column($col);
 
-        if ( $if_not_submitted eq 'delete' ) {
-            $rs_rel_delist->delete;
-        }
-        elsif ( $if_not_submitted eq 'set_to_null' ) {
-            my %update = map { $_ => undef } @rel_cols;
-            $rs_rel_delist->update( \%update );
+                    }
+                    push @cond, \%cond_for_obj;
+                }
+
+                # only limit resultset if there are related rows left
+                if (scalar @cond) {
+                    $rs_rel_delist = $rs_rel_delist->search_rs({ -not => [ @cond ] });
+                }
+            }
+
+            if ($if_not_submitted eq 'delete') {
+                $rs_rel_delist->delete;
+            }
+            elsif ($if_not_submitted eq 'set_to_null') {
+                my %update = map {$_ => undef} @rel_cols;
+                $rs_rel_delist->update(\%update);
+            }
         }
     }
     elsif ( $attrs->{accessor} eq 'single' ||

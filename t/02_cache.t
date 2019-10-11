@@ -102,9 +102,6 @@ $queries->test({
         insert => 1,
         # one by the discard_changes call for created rows
         select => 1,
-        # this is the cleanup query which deletes all dvds of the user not
-        # passed to owned_dvds even if there aren't any
-        delete => 1,
     },
 }, 'expected queries with has_many relationship and cache');
 
@@ -140,11 +137,6 @@ $queries->run(sub {
     });
 });
 $queries->test({
-    dvd => {
-        # this is the cleanup query which deletes all dvds of the user not
-        # passed to owned_dvds even if there aren't any
-        delete => 1,
-    },
     dvdtag => {
         # one for tag 3 of 'existing DVD'
         # two for tags 2 and 3 of 'new DVD'
@@ -155,8 +147,8 @@ $queries->test({
         # two from the discard_changes call for created tags of 'new DVD'
         select => 6,
         # this is the cleanup query which deletes all tags of a dvd not
-        # passed to tags even if there aren't any
-        delete => 2,
+        # passed to tags, in this case the 'crime' tag created above
+        delete => 1,
     },
 }, 'expected queries with many_to_many relationship helper and cache');
 

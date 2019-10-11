@@ -7,6 +7,9 @@ Revision history for DBIx::Class::ResultSet::RecursiveUpdate
     - Reduce select queries for has_many relationships
       to one per non-prefetched or none for prefetched has_many relationships
       down from one per related row even for prefetched relationships
+    - Don't execute a delete/update query for has_many relationships if no
+      rows need to be deleted or unlinked by setting their foreign key
+      column(s) to NULL
     - Stable update order by sorting all columns and relationships
 
 0.34      2014-02-06 23:37:32 America/New_York
