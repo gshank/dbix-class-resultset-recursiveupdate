@@ -462,24 +462,32 @@ sub _update_relation {
                 }
                 DEBUG and warn "using all non-rel updates for object " .
                     "construction: " . Dumper(\%non_rel_updates);
-                my $related_row = $related_resultset
-                    ->new_result(\%non_rel_updates);
-                for my $colname (@pks) {
-                    next
-                        if exists $pk_kvs{$colname};
+                # the object creation might fail because of non-column and
+                # non-constructor handled parameters which shouldn't break RU
+                try {
+                    my $related_row = $related_resultset
+                        ->new_result(\%non_rel_updates);
+                    for my $colname (@pks) {
+                        next
+                            if exists $pk_kvs{$colname};
 
-                    if ($related_row->can($colname)
-                        && defined $related_row->$colname) {
-                        DEBUG and warn "missing pk column $colname exists " .
-                            "and defined on object\n";
-                        $pk_kvs{$colname} = $related_row->$colname;
-                    }
-                    else {
-                        DEBUG and warn "missing pk column $colname doesn't "
-                            . "exist or isn't defined on object, aborting\n";
-                        last;
+                        if ($related_row->can($colname)
+                            && defined $related_row->$colname) {
+                            DEBUG and warn "missing pk column $colname exists " .
+                                "and defined on object\n";
+                            $pk_kvs{$colname} = $related_row->$colname;
+                        }
+                        else {
+                            DEBUG and warn "missing pk column $colname doesn't "
+                                . "exist or isn't defined on object, aborting\n";
+                            last;
+                        }
                     }
                 }
+                catch {
+                    DEBUG and warn "object construction failed, ignoring:
+$_\n";
+                };
             }
 
             if ( scalar keys %pk_kvs == scalar @pks ) {
