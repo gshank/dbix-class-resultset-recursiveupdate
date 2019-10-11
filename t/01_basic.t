@@ -385,4 +385,15 @@ ok( my $dvd_with_keysbymethod_updated = $dvd_rs->recursive_update({
     'updating keysbymethod relationship ok'
 );
 
+my $keysbymethod_rs  = $schema->resultset('KeysByMethod');
+ok( my $keysbymethod = $keysbymethod_rs->recursive_update({
+    dvd => $dvd_with_keysbymethod->id,
+    combined_key => 'foo/bar',
+    value        => 'new-value',
+}),
+    'updating keysbymethod ok'
+);
+is($keysbymethod->value, 'new-value', 'value changed');
+
+
 done_testing;

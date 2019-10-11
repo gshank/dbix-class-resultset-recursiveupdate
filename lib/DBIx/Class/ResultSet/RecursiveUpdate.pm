@@ -91,6 +91,74 @@ sub recursive_update {
         $pk_kvs{$colname} = $resolved->{$colname}
             if exists $resolved->{$colname} && defined $resolved->{$colname};
     }
+    # support the special case where a method on the related row
+    # populates one or more primary key columns and we don't have
+    # all primary key values already
+    # see DBSchema::Result::DVD relationship keysbymethod
+    DEBUG and warn "pk columns so far: " . join (', ',
+        sort keys %pk_kvs) . "\n";
+    my @non_pk_columns = grep {
+        my $colname = $_;
+        none { $colname eq $_ } keys %pk_kvs
+    }
+        sort keys %$updates;
+    DEBUG and warn "non-pk columns: " . join (', ',
+        @non_pk_columns) . "\n";
+    if ( scalar keys %pk_kvs != scalar @pks && @non_pk_columns) {
+        DEBUG and warn "not all primary keys available, trying " .
+            "object creation\n";
+        # new_result throws exception if non column values are passed
+        # because we want to also support e.g. a BUILDARGS method that
+        # populates primary key columns from an additional value
+        # filter out all relationships
+        my @non_rel_columns = grep {
+            !is_m2m( $self, $_ )
+                && !$source->has_relationship($_)
+        }
+            sort keys %$updates;
+        my %non_rel_updates = map {
+            $_ => $updates->{$_}
+        } @non_rel_columns;
+        # transform columns specified by their accessor name
+        my %columns_by_accessor = _get_columns_by_accessor($self);
+        for my $accessor_name (sort keys %columns_by_accessor) {
+            my $colname = $columns_by_accessor{$accessor_name}->{name};
+            if ($accessor_name ne $colname
+                && exists $non_rel_updates{$accessor_name}) {
+                DEBUG and warn "renaming column accessor " .
+                    "'$accessor_name' to column name '$colname'\n";
+                $non_rel_updates{$colname} = delete
+                    $non_rel_updates{$accessor_name};
+            }
+        }
+        DEBUG and warn "using all non-rel updates for object " .
+            "construction: " . Dumper(\%non_rel_updates);
+        # the object creation might fail because of non-column and
+        # non-constructor handled parameters which shouldn't break RU
+        try {
+            my $row = $self->new_result(\%non_rel_updates);
+            for my $colname (@pks) {
+                next
+                    if exists $pk_kvs{$colname};
+
+                if ($row->can($colname)
+                    && defined $row->$colname) {
+                    DEBUG and warn "missing pk column $colname exists " .
+                        "and defined on object\n";
+                    $pk_kvs{$colname} = $row->$colname;
+                }
+                else {
+                    DEBUG and warn "missing pk column $colname doesn't "
+                        . "exist or isn't defined on object, aborting\n";
+                    last;
+                }
+            }
+        }
+        catch {
+            DEBUG and warn "object construction failed, ignoring:
+$_\n";
+        };
+    }
 
     # check if row can be found in resultset cache
     if ( !defined $object && scalar keys %pk_kvs == scalar @pks ) {
