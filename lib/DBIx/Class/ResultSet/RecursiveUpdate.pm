@@ -584,17 +584,15 @@ $_\n";
             push @updated_objs, $sub_object;
         }
 
-        my @related_pks = $related_resultset->result_source->primary_columns;
-
         my $rs_rel_delist = $object->$name;
 
         # foreign table has a single pk column
-        if ( scalar @related_pks == 1 ) {
+        if ( scalar @pks == 1 ) {
             DEBUG and warn "delete in not_in\n";
             $rs_rel_delist = $rs_rel_delist->search_rs(
                 {
                     $self->current_source_alias . "." .
-                        $related_pks[0] => { -not_in => [ map ( $_->id, @updated_objs ) ] }
+                        $pks[0] => { -not_in => [ map ( $_->id, @updated_objs ) ] }
                 }
             );
         }
@@ -604,7 +602,7 @@ $_\n";
             my @cond;
             for my $obj (@updated_objs) {
                 my %cond_for_obj;
-                for my $col (@related_pks) {
+                for my $col (@pks) {
                     $cond_for_obj{ $self->current_source_alias . ".$col" } =
                         $obj->get_column($col);
 
