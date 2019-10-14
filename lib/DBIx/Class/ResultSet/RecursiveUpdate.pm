@@ -287,7 +287,18 @@ $_\n";
     # $object->{_rel_in_storage} = 1;
     # Update if %other_methods because of possible custom update method
     my $in_storage = $object->in_storage;
+
+    # preserve related resultsets as DBIx::Class::Row->update clears them
+    # yes, this directly accesses a row attribute, but no API exists and in
+    # the hope to get the recursive_update feature into core DBIx::Class this
+    # is the easiest solution
+    my $related_resultsets = $object->{related_resultsets};
+
     $object->update_or_insert if ( $object->is_changed || keys %other_methods );
+
+    # restore related resultsets
+    $object->{related_resultsets} = $related_resultsets;
+
     # this is needed to populate all columns in the row object because
     # otherwise _resolve_condition in _update_relation fails if a foreign key
     # column isn't loaded

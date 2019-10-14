@@ -69,6 +69,33 @@ $queries->test({
     },
 }, 'expected queries with cache');
 
+# test related rows cache not used after update
+$rs_users_with_cache = $rs_users->search_rs({
+    'me.id' => $user->id
+}, {
+    prefetch => 'owned_dvds',
+    cache => 1,
+});
+diag("populate cache");
+$rs_users_with_cache->all;
+
+$queries->run(sub {
+    $rs_users_with_cache->recursive_update({
+        id         => $user->id,
+        name       => 'cache name updated',
+        owned_dvds => [
+            {
+                dvd_id => 5,
+            }
+        ],
+    });
+});
+$queries->test({
+    usr => {
+        update => 1,
+    },
+}, 'expected queries with unchanged has_many relationship and cache');
+
 $rs_users_with_cache = $rs_users->search_rs({
     'me.id' => $user->id
 }, {

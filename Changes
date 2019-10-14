@@ -10,6 +10,7 @@ Revision history for DBIx::Class::ResultSet::RecursiveUpdate
     - Don't execute a delete/update query for has_many relationships if no
       rows need to be deleted or unlinked by setting their foreign key
       column(s) to NULL
+    - Preserve prefetched related resultsets on row update
     - Stable update order by sorting all columns and relationships
 
 0.34      2014-02-06 23:37:32 America/New_York
