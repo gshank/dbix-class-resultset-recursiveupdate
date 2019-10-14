@@ -134,7 +134,7 @@ sub recursive_update {
 
     # this section determines to what each key/value pair maps to,
     # column or relationship
-    for my $name ( keys %$updates ) {
+    for my $name ( sort keys %$updates ) {
         DEBUG and warn "updating $name to "
             . ($updates->{$name} // '[undef]') . "\n";
         # columns
@@ -203,13 +203,13 @@ sub recursive_update {
 
     # first update columns and other accessors
     # so that later related records can be found
-    for my $name ( keys %columns ) {
+    for my $name ( sort keys %columns ) {
         $object->$name( $columns{$name} );
     }
-    for my $name ( keys %other_methods ) {
+    for my $name ( sort keys %other_methods ) {
         $object->$name( $other_methods{$name} );
     }
-    for my $name ( keys %pre_updates ) {
+    for my $name ( sort keys %pre_updates ) {
         _update_relation( $self, $name, $pre_updates{$name}, $object, $if_not_submitted, 0 );
     }
 
@@ -229,7 +229,7 @@ sub recursive_update {
     }
 
     # updating many_to_many
-    for my $name ( keys %m2m_accessors ) {
+    for my $name ( sort keys %m2m_accessors ) {
         DEBUG and warn "updating m2m $name\n";
         my $value = $m2m_accessors{$name};
 
@@ -265,7 +265,7 @@ sub recursive_update {
         my $set_meth = 'set_' . $name;
         $object->$set_meth( \@rows );
     }
-    for my $name ( keys %post_updates ) {
+    for my $name ( sort keys %post_updates ) {
         _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted, $in_storage );
     }
     delete $ENV{DBIC_NULLABLE_KEY_NOWARN};
@@ -312,7 +312,7 @@ sub _get_matching_row {
         push @matching_rows, $row
             if all { $kvs->{$_} eq $row->get_column($_) }
                 grep { !ref $kvs->{$_} }
-                keys %$kvs;
+                sort keys %$kvs;
     }
     DEBUG and warn "multiple matching rows: " . scalar @matching_rows . "\n"
         if @matching_rows > 1;
@@ -370,7 +370,7 @@ sub _update_relation {
         $resolved = $new_resolved;
     }
     else {
-        @rel_cols = keys %{ $info->{cond} };
+        @rel_cols = sort keys %{ $info->{cond} };
         map { s/^foreign\.// } @rel_cols;
     }
 
@@ -645,7 +645,7 @@ sub get_m2m_source {
 
 sub _delete_empty_auto_increment {
     my ( $self, $object ) = @_;
-    for my $col ( keys %{ $object->{_column_data} } ) {
+    for my $col ( sort keys %{ $object->{_column_data} } ) {
         if (
             $object->result_source->column_info($col)->{is_auto_increment} and
             ( !defined $object->{_column_data}{$col} or
