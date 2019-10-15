@@ -13,12 +13,14 @@ sub recursive_update {
     my $fixed_fields;
     my $unknown_params_ok;
     my $m2m_force_set_rel;
+    my $trigger_cascades;
 
     # 0.21+ api
     if ( defined $attrs && ref $attrs eq 'HASH' ) {
         $fixed_fields      = $attrs->{fixed_fields};
         $unknown_params_ok = $attrs->{unknown_params_ok};
         $m2m_force_set_rel = $attrs->{m2m_force_set_rel};
+        $trigger_cascades  = $attrs->{trigger_cascades};
     }
 
     # pre 0.21 api
@@ -32,6 +34,7 @@ sub recursive_update {
         fixed_fields      => $fixed_fields,
         unknown_params_ok => $unknown_params_ok,
         m2m_force_set_rel => $m2m_force_set_rel,
+        trigger_cascades  => $trigger_cascades,
     );
 }
 
@@ -45,9 +48,9 @@ use Try::Tiny;
 sub recursive_update {
     my %params = @_;
     my ( $self, $updates, $fixed_fields, $object, $resolved, $if_not_submitted,
-        $unknown_params_ok, $m2m_force_set_rel )
+        $unknown_params_ok, $m2m_force_set_rel, $trigger_cascades )
         = @params{
-        qw/resultset updates fixed_fields object resolved if_not_submitted unknown_params_ok m2m_force_set_rel/
+        qw/resultset updates fixed_fields object resolved if_not_submitted unknown_params_ok m2m_force_set_rel trigger_cascades/
         };
     $resolved ||= {};
     $ENV{DBIC_NULLABLE_KEY_NOWARN} = 1;
@@ -199,7 +202,7 @@ sub recursive_update {
         $object->$name( $other_methods{$name} );
     }
     for my $name ( keys %pre_updates ) {
-        _update_relation( $self, $name, $pre_updates{$name}, $object, $if_not_submitted );
+        _update_relation( $self, $name, $pre_updates{$name}, $object, $if_not_submitted, $trigger_cascades );
     }
 
     # $self->_delete_empty_auto_increment($object);
@@ -250,7 +253,7 @@ sub recursive_update {
         # I'm not sure why the following is necessary, but sometimes we get here
         # and the $object doesn't have a pk, and discard_changes must be executed
         $object->discard_changes;
-        _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted );
+        _update_relation( $self, $name, $post_updates{$name}, $object, $if_not_submitted, $trigger_cascades );
     }
     delete $ENV{DBIC_NULLABLE_KEY_NOWARN};
     return $object;
@@ -271,7 +274,7 @@ sub _get_columns_by_accessor {
 
 # Arguments: $rs, $name, $updates, $row, $if_not_submitted
 sub _update_relation {
-    my ( $self, $name, $updates, $object, $if_not_submitted ) = @_;
+    my ( $self, $name, $updates, $object, $if_not_submitted, $trigger_cascades ) = @_;
 
     # this should never happen because we're checking the paramters passed to
     # recursive_update, but just to be sure...
@@ -379,7 +382,12 @@ sub _update_relation {
         }
 
         if ( $if_not_submitted eq 'delete' ) {
-            $rs_rel_delist->delete;
+        	if ($trigger_cascades) {
+        		$rs_rel_delist->delete_all;
+        	} 
+        	else {
+        		$rs_rel_delist->delete;
+        	}
         }
         elsif ( $if_not_submitted eq 'set_to_null' ) {
             my %update = map { $_ => undef } @rel_cols;
