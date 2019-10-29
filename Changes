@@ -1,6 +1,7 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
+    - Fix missing Test::Exception test dependency
 
 0.40      2019-10-29 14:16:34+01:00 Europe/Vienna
     - Fix missing Try::Tiny dependency
