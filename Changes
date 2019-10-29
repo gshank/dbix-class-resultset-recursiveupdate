@@ -1,6 +1,8 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
+
+0.40      2019-10-29 14:16:34+01:00 Europe/Vienna
     - Fix missing Try::Tiny dependency
     - Don't try to find a row by primary key if not all primary key columns are
       defined
