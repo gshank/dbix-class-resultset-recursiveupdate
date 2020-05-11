@@ -415,13 +415,9 @@ sub _update_relation {
 
     # get a related resultset without a condition
     my $related_resultset = $self->related_resultset($name)->result_source->resultset;
-    my $resolved;
-    if ( $self->result_source->can('_resolve_condition') ) {
-        $resolved = $self->result_source->_resolve_condition( $info->{cond}, $name, $object, $name );
-    }
-    else {
-        $self->throw_exception("result_source must support _resolve_condition");
-    }
+    $self->throw_exception("result_source must support _resolve_condition")
+        unless $self->result_source->can('_resolve_condition');
+    my $resolved = $self->result_source->_resolve_condition( $info->{cond}, $name, $object, $name );
 
     $resolved = {}
         if defined $DBIx::Class::ResultSource::UNRESOLVABLE_CONDITION &&
