@@ -242,6 +242,8 @@ $_\n";
                         { $foreign_rel => $_ }
                         } @{ $updates->{$name} }
                 ];
+                DEBUG and warn "m2m '$name' transformed to:\n$bridge_rel => " .
+                    Dumper($post_updates{$bridge_rel}) . "\n";
             }
             # Fall back to set_$rel if IntrospectableM2M
             # is not available. (removing and re-adding all relationships)
@@ -294,7 +296,9 @@ $_\n";
     # is the easiest solution
     my $related_resultsets = $object->{related_resultsets};
 
+    DEBUG and warn "before update_or_insert\n";
     $object->update_or_insert if ( $object->is_changed || keys %other_methods );
+    DEBUG and warn "after update_or_insert\n";
 
     # restore related resultsets
     $object->{related_resultsets} = $related_resultsets;
@@ -472,7 +476,8 @@ sub _update_relation {
         my @pks = $related_result_source->primary_columns;
 
         for my $sub_updates ( @{$updates} ) {
-            DEBUG and warn "updating related row\n";
+            DEBUG and warn "updating related row: " . Dumper($sub_updates)
+                . "\n";
             my %pk_kvs;
             # detect the special case where the primary key of a currently not
             # related row is passed in the updates hash
@@ -558,7 +563,8 @@ $_\n";
             }
 
             if ( scalar keys %pk_kvs == scalar @pks ) {
-                DEBUG and warn "all primary keys available\n";
+                DEBUG and warn "all primary keys available, " .
+                    "searching for row in currently related rows\n";
                 # the lookup can fail if the primary key of a currently not
                 # related row is passed in the updates hash
                 $related_object = _get_matching_row(\%pk_kvs, \@related_rows);
@@ -692,6 +698,8 @@ $_\n";
             "recursive_update doesn't now how to handle relationship '$name' with accessor " .
                 $info->{attrs}{accessor} );
     }
+
+    DEBUG and warn "_update_relation end\n";
 }
 
 sub is_m2m {
