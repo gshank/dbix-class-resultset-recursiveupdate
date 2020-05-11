@@ -2,6 +2,9 @@ Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
     - Fix missing Test::Exception test dependency
+    - Get rid of discard_changes for each created row
+      To further reduce the number of queries. This required to remove support
+      for populating a column used by a has_many relationship by a related row.
 
 0.40      2019-10-29 14:16:34+01:00 Europe/Vienna
     - Fix missing Try::Tiny dependency

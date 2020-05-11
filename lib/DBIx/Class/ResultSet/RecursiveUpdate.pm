@@ -299,14 +299,6 @@ $_\n";
     # restore related resultsets
     $object->{related_resultsets} = $related_resultsets;
 
-    # this is needed to populate all columns in the row object because
-    # otherwise _resolve_condition in _update_relation fails if a foreign key
-    # column isn't loaded
-    if (not $in_storage) {
-        DEBUG and warn "discard_changes for created row\n";
-        $object->discard_changes;
-    }
-
     # updating many_to_many
     for my $name ( sort keys %m2m_accessors ) {
         DEBUG and warn "updating m2m $name\n";
