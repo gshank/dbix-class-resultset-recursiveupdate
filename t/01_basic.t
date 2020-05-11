@@ -155,23 +155,19 @@ $queries->test({
     dvd => {
         # one for create new dvd
         insert => 1,
-        # one for discard_changes after insert
-        select => 1,
     },
     dvdtag => {
         # two for create links from dvd to tag
         insert => 2,
         # two for check if related row exists
-        # two for discard_changes after insert
-        select => 4,
+        select => 2,
     },
     liner_notes => {
         # one for new
         insert => 1,
         # one for calling the relationship accessor
         # one for check if related row exists
-        # one for discard_changes after insert
-        select => 3,
+        select => 2,
     },
     tag => {
         # one for check if related row exists
@@ -182,15 +178,13 @@ $queries->test({
         # one for new like_has_many
         insert => 1,
         # one for check if related row exists
-        # one for discard_changes after insert
-        select => 2,
+        select => 1,
     },
     usr => {
         # one new current_borrower
         insert => 1,
-        # one for discard_changes after insert of current_borrower and owner
         # two for DBIx::Class insert of dvd (multi-create?)
-        select => 3,
+        select => 2,
     },
 });
 $expected_user_count++;
