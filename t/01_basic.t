@@ -4,11 +4,13 @@ use Test::More;
 use Test::Warn;
 use Test::Trap;
 use DBIx::Class::ResultSet::RecursiveUpdate;
+use Test::DBIC::ExpectedQueries;
 
 use lib 't/lib';
 use DBSchema;
 
 my $schema = DBSchema->get_test_schema();
+my $queries = Test::DBIC::ExpectedQueries->new({ schema => $schema });
 
 # moosified tests
 #use DBSchemaMoose;
@@ -152,7 +154,64 @@ $updates = {
     ],
 };
 
-my $dvd = $dvd_rs->recursive_update($updates);
+my $dvd = $queries->run(sub {
+    $dvd_rs->recursive_update($updates);
+});
+$queries->test({
+    dvd => {
+        # one for create new dvd
+        insert => 1,
+        # one for discard_changes after insert
+        select => 1,
+    },
+    dvdtag => {
+        # two for create links from dvd to tag
+        insert => 2,
+        # two for check if related row exists
+        # two for discard_changes after insert
+        select => 4,
+    },
+    liner_notes => {
+        # one for new
+        insert => 1,
+        # one for calling the relationship accessor
+        # one for check if related row exists
+        # one for discard_changes after insert
+        select => 3,
+    },
+    onekey => {
+        # one for new
+        insert => 1,
+        # one for check if related row exists
+        # one for discard_changes after insert
+        select => 2,
+    },
+    tag => {
+        # one for check if related row exists
+        # one for DBIx::Class multi-create code because of { id => '3' }
+        select => 2,
+    },
+    twokeys => {
+        # one for new like_has_many
+        insert => 1,
+        # one for check if related row exists
+        # one for discard_changes after insert
+        select => 2,
+    },
+    twokeys_belongsto => {
+        # one new
+        insert => 1,
+        # discard_changes after insert
+        select => 1,
+    },
+    usr => {
+        # one new current_borrower
+        insert => 1,
+        # one for discard_changes after insert of current_borrower and owner
+        # two for DBIx::Class insert of dvd (multi-create?)
+        select => 3,
+    },
+});
 $expected_user_count++;
 
 is( $dvd_rs->count, $initial_dvd_count + 2, 'Dvd created' );
