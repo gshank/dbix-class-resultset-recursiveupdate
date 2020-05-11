@@ -146,12 +146,6 @@ $updates = {
     },
     liner_notes => { notes => 'test note', },
     like_has_many  => [ { key2 => 1 } ],
-    like_has_many2 => [
-        {
-            onekey => { name => 'aaaaa' },
-            key2   => 1
-        }
-    ],
 };
 
 my $dvd = $queries->run(sub {
@@ -179,13 +173,6 @@ $queries->test({
         # one for discard_changes after insert
         select => 3,
     },
-    onekey => {
-        # one for new
-        insert => 1,
-        # one for check if related row exists
-        # one for discard_changes after insert
-        select => 2,
-    },
     tag => {
         # one for check if related row exists
         # one for DBIx::Class multi-create code because of { id => '3' }
@@ -197,12 +184,6 @@ $queries->test({
         # one for check if related row exists
         # one for discard_changes after insert
         select => 2,
-    },
-    twokeys_belongsto => {
-        # one new
-        insert => 1,
-        # discard_changes after insert
-        select => 1,
     },
     usr => {
         # one new current_borrower
@@ -228,17 +209,6 @@ ok(
       ->find( { dvd_name => 'Test name', key2 => 1 } ),
     'Twokeys created'
 );
-my $onekey = $schema->resultset('Onekey')->search( { name => 'aaaaa' } )->first;
-ok( $onekey, 'Onekey created' );
-ok(
-    $schema->resultset('Twokeys_belongsto')
-      ->find( { key1 => $onekey->id, key2 => 1 } ),
-    'Twokeys_belongsto created'
-);
-TODO: {
-    local $TODO = 'value of fk from a multi relationship';
-    is( $dvd->twokeysfk, $onekey->id, 'twokeysfk in Dvd' );
-}
 is( $dvd->name, 'Test name', 'Dvd name set' );
 
 # changing existing records
