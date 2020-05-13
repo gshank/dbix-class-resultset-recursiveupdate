@@ -8,7 +8,7 @@ Revision history for DBIx::Class::ResultSet::RecursiveUpdate
     - Reduce select queries for has_many relationships where the foreign key
       column and the relationship is named the same and the related row is
       specified as a hashref containing the foreign column
-    - Don't execute select queries for has_many relationships of created rows
+    - Don't execute select queries for any relationships of created rows
       because no related rows can already exist
 
 0.40      2019-10-29 14:16:34+01:00 Europe/Vienna

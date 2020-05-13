@@ -163,9 +163,8 @@ $queries->test({
     liner_notes => {
         # one for new
         insert => 1,
-        # one for calling the relationship accessor
         # one for check if related row exists
-        select => 2,
+        select => 1,
     },
     tag => {
         # one for check if related row exists

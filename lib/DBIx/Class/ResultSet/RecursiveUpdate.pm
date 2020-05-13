@@ -713,11 +713,16 @@ $_\n";
                 $existing_row = 1;
             }
             DEBUG and warn $existing_row ? "existing row\n" : "new row\n";
+            # newly created rows can't have related rows
+            my $related_row;
+            if ($row_existed) {
+                $related_row = $object->$name;
+                DEBUG and warn "got related row\n";
+            }
             if ( blessed($updates) && $updates->isa('DBIx::Class::Row') ) {
                 $sub_object = $updates;
             }
-            elsif ( $attrs->{accessor} eq 'single' &&
-                defined $object->$name )
+            elsif ( $attrs->{accessor} eq 'single' && defined $related_row )
             {
                 $sub_object = recursive_update(
                     resultset => $related_resultset,
