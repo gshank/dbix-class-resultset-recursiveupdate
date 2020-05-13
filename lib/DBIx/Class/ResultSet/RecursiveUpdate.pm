@@ -418,7 +418,8 @@ sub _update_relation {
     my $attrs = $info->{attrs};
 
     # get a related resultset without a condition
-    my $related_resultset = $self->related_resultset($name)->result_source->resultset;
+    my $related_source = $self->related_resultset($name)->result_source;
+    my $related_resultset = $related_source->resultset;
     $self->throw_exception("result_source must support _resolve_condition")
         unless $self->result_source->can('_resolve_condition');
     my $resolved = $self->result_source->_resolve_condition( $info->{cond}, $name, $object, $name );
@@ -481,9 +482,36 @@ sub _update_relation {
             my %pk_kvs;
             # detect the special case where the primary key of a currently not
             # related row is passed in the updates hash
+            # let the resolved column values fill any missing primary key
+            # columns but not overwrite them
             for my $colname (@pks) {
-                if (exists $sub_updates->{$colname} && defined $sub_updates->{$colname}) {
-                    $pk_kvs{$colname} = $sub_updates->{$colname};
+                if (exists $sub_updates->{$colname}
+                    && defined $sub_updates->{$colname}) {
+                    # $sub_updates->{$colname} might be a hashref if a
+                    # relationship is named the same as a foreign key column
+                    if (ref $sub_updates->{$colname} eq 'HASH') {
+                        if ($related_source->has_relationship($colname)) {
+                            my $rel_info = $related_source
+                                ->relationship_info($colname);
+                            my @rel_cols = sort keys %{ $rel_info->{cond} };
+                            map { s/^foreign\.// } @rel_cols;
+                            $self->throw_exception("passing a hashref for " .
+                                "multi-column rel '$colname' not implemented")
+                                if scalar @rel_cols != 1;
+                            DEBUG and warn "using '$rel_cols[0]' in hashref " .
+                                "for primary key column '$colname'\n";
+                            $pk_kvs{$colname} = $sub_updates->{$colname}
+                                ->{$rel_cols[0]};
+                        }
+                        else {
+                            $self->throw_exception(
+                                "data for $colname is a hashref but no " .
+                                "relationship with that name exists");
+                        }
+                    }
+                    else {
+                        $pk_kvs{$colname} = $sub_updates->{$colname};
+                    }
                     next;
                 }
                 $pk_kvs{$colname} = $resolved->{$colname}
