@@ -496,7 +496,9 @@ sub _update_relation {
                             my @rel_cols = sort keys %{ $rel_info->{cond} };
                             map { s/^foreign\.// } @rel_cols;
                             $self->throw_exception("passing a hashref for " .
-                                "multi-column rel '$colname' not implemented")
+                                "a multi-column relationship named the " .
+                                "same as a column ('$colname') is not " .
+                                "implemented")
                                 if scalar @rel_cols != 1;
                             DEBUG and warn "using '$rel_cols[0]' in hashref " .
                                 "for primary key column '$colname'\n";
