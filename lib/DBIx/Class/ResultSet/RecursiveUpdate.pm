@@ -590,18 +590,51 @@ $_\n";
                 };
             }
 
+            # The only reasons to let recursive_update search for an existing
+            # row (= not passing a new result to it) is relinking of existing
+            # rows.
+            # Relinking is only possible if all primary key column values are
+            # known and only required if at least one of the foreign row
+            # columns, which are part of the relationship, differ between
+            # current and target ones.
+            # There are two different cases:
+            # The foreign row columns are part of the foreign primary key.
+            # An example is the dvdtags relationship of Dvd.
+            # Or one or more non primary key form the relationship.
+            # An example is the owned_dvds relationship of User.
+            my $relink = 0;
+
             if ( scalar keys %pk_kvs == scalar @pks ) {
                 DEBUG and warn "all primary keys available, " .
                     "searching for row in currently related rows\n";
                 # the lookup can fail if the primary key of a currently not
                 # related row is passed in the updates hash
                 $related_object = _get_matching_row(\%pk_kvs, \@related_rows);
+                # %pk_kvs contains the scalar value instead of a hashref
+                # when a column and relationship are named the same so
+                # overwrite the hashref in $sub_updates with that
+                # don't include %$resolved as well as that contains target data
+                my %current_data = (%$sub_updates, %pk_kvs);
+                DEBUG and warn "current data: " . Dumper(\%current_data);
+                DEBUG and warn "target data: " . Dumper($resolved);
+
+                no warnings 'uninitialized';
+
+                # If the row can't be found by _get_matching_row it is
+                # currently not linked or doesn't even exist. In this case we
+                # must execute a sql select to find it.
+                $relink = 1
+                    if (not defined $related_object)
+                        && (any { $resolved->{$_} ne $current_data{$_} }
+                            keys %$resolved);
             }
+            DEBUG and warn "relink: $relink\n";
+
             # pass an empty object if no related row found and it's not the
             # special case where the primary key of a currently not related
             # row is passed in the updates hash to prevent the find by pk in
             # recursive_update to happen
-            else {
+            if ((not defined $related_object) && (not $relink)) {
                 DEBUG and warn "passing empty row to prevent find by pk\n";
                 $related_object = $related_resultset->new_result({});
             }
