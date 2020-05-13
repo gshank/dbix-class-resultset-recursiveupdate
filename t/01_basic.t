@@ -159,8 +159,6 @@ $queries->test({
     dvdtag => {
         # two for create links from dvd to tag
         insert => 2,
-        # two for check if related row exists
-        select => 2,
     },
     liner_notes => {
         # one for new
@@ -177,8 +175,6 @@ $queries->test({
     twokeys => {
         # one for new like_has_many
         insert => 1,
-        # one for check if related row exists
-        select => 1,
     },
     usr => {
         # one new current_borrower
