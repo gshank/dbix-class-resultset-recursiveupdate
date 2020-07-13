@@ -14,4 +14,11 @@ my $podcast_rs = $schema->resultset('Podcast');
     is $ret1, $ret2, "no side effects";
 }
 
+{
+    my $before = join ',', sort keys %{$podcast_rs->result_source->column_info('id')};
+    DBIx::Class::ResultSet::RecursiveUpdate::Functions::_get_columns_by_accessor($podcast_rs);
+    my $after  = join ',', sort keys %{$podcast_rs->result_source->column_info('id')};
+    is $before, $after, "no side effects";
+}
+
 done_testing;

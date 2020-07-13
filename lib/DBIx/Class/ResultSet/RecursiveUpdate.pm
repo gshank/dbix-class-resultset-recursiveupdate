@@ -354,8 +354,7 @@ sub _get_columns_by_accessor {
     my %columns;
     for my $name ( $source->columns ) {
         my $info = $source->column_info($name);
-        $info->{name} = $name;
-        $columns{ $info->{accessor} || $name } = $info;
+        $columns{ $info->{accessor} || $name } = { %$info, name => $name };
     }
     return %columns;
 }
