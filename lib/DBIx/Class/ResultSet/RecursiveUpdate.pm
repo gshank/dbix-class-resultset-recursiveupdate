@@ -851,7 +851,8 @@ sub _master_relation_cond {
     sub _inner {
         my ( $source, $cond, @foreign_ids ) = @_;
 
-        while ( my ( $f_key, $col ) = each %{$cond} ) {
+        for my $f_key ( sort keys %$cond ) {
+            my $col = $cond->{$f_key};
 
             # might_have is not master
             $col   =~ s/^self\.//;
