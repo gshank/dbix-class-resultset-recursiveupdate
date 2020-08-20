@@ -55,6 +55,16 @@ sub recursive_update {
     $resolved ||= {};
     $ENV{DBIC_NULLABLE_KEY_NOWARN} = 1;
 
+    local $SIG{__WARN__} = sub {
+        my $level = 0;
+        my $i = 0;
+        while (1) {
+            my $sub = (caller($i++))[3] or last;
+            $level++ if $sub =~ /(?:recursive_update|_update_relation)$/;
+        }
+        warn map { s/^/"    "x$level/egmr } @_;
+    } if DEBUG;
+
     my $source = $self->result_source;
 
     croak "first parameter needs to be defined"
