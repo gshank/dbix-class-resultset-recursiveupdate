@@ -364,8 +364,7 @@ sub _get_columns_by_accessor {
     my %columns;
     for my $name ( $source->columns ) {
         my $info = $source->column_info($name);
-        $info->{name} = $name;
-        $columns{ $info->{accessor} || $name } = $info;
+        $columns{ $info->{accessor} || $name } = { %$info, name => $name };
     }
     return %columns;
 }
@@ -861,8 +860,8 @@ sub _master_relation_cond {
     sub _inner {
         my ( $source, $cond, @foreign_ids ) = @_;
 
-        while ( my ( $f_key, $col ) = each %{$cond} ) {
-
+        for my $f_key ( sort keys %$cond ) {
+            my $col = $cond->{$f_key};
             # might_have is not master
             $col   =~ s/^self\.//;
             $f_key =~ s/^foreign\.//;
