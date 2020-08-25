@@ -75,6 +75,19 @@ is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 1, "add one: update exec
 is $dvd_item->tags_rs->count, 3, "add one: DVD item has 3 tags";
 
 #
+# no changes
+#
+
+$dbic_trace->clear;
+
+$dvd_rs->recursive_update(\%updates);
+
+is $dbic_trace->count_messages(), 2, "no changes: two queries executed";
+is $dbic_trace->count_messages("^SELECT"), 2, "no changes: update executed two select queries";
+
+is $dvd_item->tags_rs->count, 3, "no changes: DVD item still has 3 tags";
+
+#
 # removing one
 #
 
@@ -306,6 +319,21 @@ is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "add one: update exec
 is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 3, "add one: update executed three insert";
 
 is $tag_item->dvds_rs->count, 3, "add one: tag item has 3 dvds";
+
+#
+# no changes
+#
+
+$dbic_trace->clear;
+
+$tag_rs->recursive_update(\%updates);
+
+is $dbic_trace->count_messages(), 8, "no changes: eight queries executed";
+is $dbic_trace->count_messages("^SELECT"), 4, "no changes: update executed two select queries";
+is $dbic_trace->count_messages("^DELETE"), 1, "no changes: update executed one delete query";
+is $dbic_trace->count_messages("^INSERT"), 3, "no changes: update executed three insert queries";
+
+is $tag_item->dvds_rs->count, 3, "no changes: tag item still has 3 dvds";
 
 #
 # removing one
