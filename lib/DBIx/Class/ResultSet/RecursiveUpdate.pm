@@ -393,6 +393,7 @@ sub _get_matching_row {
 
     my @matching_rows;
     for my $row (@$rows) {
+        no warnings 'uninitialized';
         push @matching_rows, $row
             if all { $kvs->{$_} eq $row->get_column($_) }
                 grep { !ref $kvs->{$_} }

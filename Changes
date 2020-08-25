@@ -2,6 +2,7 @@ Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
     - Fix side effects like change column_info and usage of each
+    - Silence uninitialized value warnings
 
 0.41      2020-05-13 13:13:33+02:00 Europe/Vienna
     - Fix missing Test::Exception test dependency
