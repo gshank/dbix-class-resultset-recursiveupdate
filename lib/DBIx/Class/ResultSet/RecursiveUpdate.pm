@@ -532,12 +532,19 @@ sub _update_relation {
             }
             my $related_object;
 
+            my @missing_pks = grep {
+                    my $pkcolname = $_;
+                    none { $_ eq $pkcolname } keys %pk_kvs;
+                } @pks;
+
             # support the special case where a method on the related row
             # populates one or more primary key columns and we don't have
             # all primary key values already
             # see DBSchema::Result::DVD relationship keysbymethod
             DEBUG and warn "pk columns so far: " . join (', ',
                 sort keys %pk_kvs) . "\n";
+            DEBUG and warn "pk columns missing: " . join (', ',
+                sort @missing_pks) . "\n";
             my @non_pk_columns = grep {
                     my $colname = $_;
                     none { $colname eq $_ } keys %pk_kvs
@@ -545,6 +552,51 @@ sub _update_relation {
                 sort keys %$sub_updates;
             DEBUG and warn "non-pk columns: " . join (', ',
                 @non_pk_columns) . "\n";
+            if ( scalar keys %pk_kvs != scalar @pks && @non_pk_columns) {
+                DEBUG and warn "not all primary keys available, trying " .
+                    "relationships\n";
+                my @rel_names = grep {
+                        $related_result_source->has_relationship($_)
+                    } sort keys %$sub_updates;
+
+                for my $relname (@rel_names) {
+                    my $rel_info = $related_result_source
+                        ->relationship_info($relname);
+                    next
+                        unless $rel_info->{attrs}->{accessor} eq 'single'
+                            && $rel_info->{attrs}->{is_foreign_key_constraint};
+
+                    for my $f_key ( sort keys %{$rel_info->{cond}} ) {
+                        my $col = $rel_info->{cond}->{$f_key};
+                        $col   =~ s/^self\.//;
+                        $f_key =~ s/^foreign\.//;
+
+                        next
+                            unless any { $col eq $_ } @missing_pks;
+
+                        DEBUG and warn "populating primary key column " .
+                            "'$col' from relationship '$relname'\n";
+                        # rel holds a scalar value
+                        if (keys %{$rel_info->{cond}} == 1 && !ref $sub_updates->{$relname}) {
+                            $pk_kvs{$col} = delete $sub_updates->{$relname};
+                            # optimization to not update the related row
+                            # when only the primary key of it is given
+                            $sub_updates->{$col} = $pk_kvs{$col};
+                        }
+                        # rel holds a hashref
+                        elsif (ref $sub_updates->{$relname} eq 'HASH') {
+                            $pk_kvs{$col} =
+                                $sub_updates->{$relname}->{$f_key};
+                        }
+                        else {
+                            $self->throw_exception("passing anything else " .
+                                "but a scalar or a hashref is not " .
+                                "implemented");
+                        }
+                    }
+                }
+            }
+
             if ( scalar keys %pk_kvs != scalar @pks && @non_pk_columns) {
                 DEBUG and warn "not all primary keys available, trying " .
                     "object creation\n";
