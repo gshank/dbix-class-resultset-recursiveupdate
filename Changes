@@ -1,6 +1,8 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
+
+0.42      2020-08-25 22:26:58+02:00 Europe/Vienna
     - Fix side effects like change column_info and usage of each
     - Silence uninitialized value warnings
     - Fix updating many_to_many relationship helpers when the foreign
