@@ -40,389 +40,340 @@ $storage->debugcb(sub { $dbic_trace->print($_[1]) });
 my $dvd_rs  = $schema->resultset('Dvd');
 my $tag_rs = $schema->resultset('Tag');
 
-ok $dvd_rs->result_class->can("_m2m_metadata"), "dvd-rs has m2m metadata";
-ok ! $tag_rs->result_class->can("_m2m_metadata"), "tag-rs has no m2m metadata";
+subtest 'testing m2m updates with IntrospectableM2M' => sub {
+    ok $dvd_rs->result_class->can("_m2m_metadata"), "dvd rs has m2m metadata";
+    my $dvd_item = $dvd_rs->first;
+    my $tag_ids = [$dvd_item->tags_rs->get_column('id')->all];
 
-##############################################
-# testing m2m updates with IntrospectableM2M #
-##############################################
+    subtest 'add one' => sub {
+        push @$tag_ids, 1;
 
-my $dvd_item = $dvd_rs->first;
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => $tag_ids,
+        );
 
+        $dbic_trace->clear;
 
-#
-# adding one
-#
+        $dvd_rs->recursive_update(\%updates);
 
-my $tag_ids = [$dvd_item->tags_rs->get_column("id")->all];
+        ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did not remove all tags";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "update executed no delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 1, "update executed one insert";
 
-push @$tag_ids, 1;
+        is $dvd_item->tags_rs->count, 3, "DVD item has 3 tags";
+    };
 
+    subtest 'no changes' => sub {
+        $dbic_trace->clear;
 
-my %updates = (
-	dvd_id => $dvd_item->id,
-	tags => $tag_ids,
-);
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => $tag_ids,
+        );
 
-$dbic_trace->clear;
+        $dvd_rs->recursive_update(\%updates);
 
-$dvd_rs->recursive_update(\%updates);
+        is $dbic_trace->count_messages, 2, "two queries executed";
+        is $dbic_trace->count_messages("^SELECT"), 2, "update executed two select queries";
 
-ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "add one: update did not remove all tags'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "add one: update executed no delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 1, "add one: update executed one insert";
+        is $dvd_item->tags_rs->count, 3, "DVD item still has 3 tags";
+    };
 
-is $dvd_item->tags_rs->count, 3, "add one: DVD item has 3 tags";
+    subtest 'remove one' => sub {
+        shift @$tag_ids;
 
-#
-# no changes
-#
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => $tag_ids,
+        );
 
-$dbic_trace->clear;
+        $dbic_trace->clear;
 
-$dvd_rs->recursive_update(\%updates);
+        $dvd_rs->recursive_update(\%updates);
 
-is $dbic_trace->count_messages(), 2, "no changes: two queries executed";
-is $dbic_trace->count_messages("^SELECT"), 2, "no changes: update executed two select queries";
+        ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did not remove all tags";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "update executed one delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "update executed no insert";
 
-is $dvd_item->tags_rs->count, 3, "no changes: DVD item still has 3 tags";
+        is $dvd_item->tags_rs->count, 2, "DVD item has 2 tags";
+    };
 
-#
-# removing one
-#
+    subtest 'add recursive' => sub {
+        #push @$tag_ids, ( 4, 5, 6 );
 
-shift @$tag_ids;
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags => [
+                (map { { name => $_->name, id => $_->id } }
+                    $dvd_item->tags->all),
+                { name => "winnie" },
+                { name => "fanny" },
+                { name => "sammy" },
+            ],
+        );
 
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => $tag_ids,
-);
+        $dbic_trace->clear;
 
-$dbic_trace->clear;
+        $dvd_rs->recursive_update(\%updates);
 
-$dvd_rs->recursive_update(\%updates);
+        ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did not remove all tags";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "update executed no delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 3, "update executed three inserts in dvdtag";
+        is $dbic_trace->count_messages("^INSERT INTO tag "), 3, "update executed three inserts in tag";
 
-ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "remove one: update did not remove all tags'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "remove one: update executed one delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "remove one: update executed no insert";
+        is $dvd_item->tags_rs->count, 5, "DVD item has 5 tags";
+    };
 
-is $dvd_item->tags_rs->count, 2, "remove one: DVD item has 2 tags";
+    subtest 'update recursive' => sub {
+        #push @$tag_ids, ( 4, 5, 6 );
 
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => [(
+                map { { name => $_->name.'_Changed', id => $_->id } }
+                    $dvd_item->tags->all
+            )],
+        );
 
-#
-# adding recursive
-#
+        $dbic_trace->clear;
 
-#push @$tag_ids, ( 4, 5, 6 );
+        $dvd_rs->recursive_update(\%updates);
 
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => [
-            (map { { name => $_->name, id => $_->id } } $dvd_item->tags->all) ,
-            { name => "winnie" },
-            { name => "fanny" },
-            { name => "sammy" },
-    ],
-);
+        ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did not remove all tags";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "update executed no delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "update executed no inserts in dvdtag";
+        is $dbic_trace->count_messages("^UPDATE tag "), 5, "update executed five updates in tag";
 
-$dbic_trace->clear;
+        is $dvd_item->tags_rs->count, 5, "DVD item has 5 tags";
+    };
 
-$dvd_rs->recursive_update(\%updates);
+    subtest 'update and remove' => sub {
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => [(
+                map { { name => $_->name.'More', id => $_->id } }
+                    $dvd_item->tags->all
+            )],
+        );
 
-ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "add several: update did not remove all tags'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "add several: update executed no delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 3, "add several: update executed three inserts in dvdtag";
-is $dbic_trace->count_messages("^INSERT INTO tag "), 3, "add several: update executed three inserts in tag";
+        $updates{tags} = [splice @{$updates{tags}}, 2, 3];
 
-is $dvd_item->tags_rs->count, 5, "add several: DVD item has 5 tags";
+        $dbic_trace->clear;
 
-#
-# updating recursive
-#
+        $dvd_rs->recursive_update(\%updates);
 
-#push @$tag_ids, ( 4, 5, 6 );
+        ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did not remove all tags";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "update executed one delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "update executed no inserts in dvdtag";
+        is $dbic_trace->count_messages("^UPDATE tag "), 3, "update executed three updates in tag";
 
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => [
-            (map { { name => $_->name."_Changed", id => $_->id } } $dvd_item->tags->all) ,
-    ],
-);
+        is $dvd_item->tags_rs->count, 3, "DVD item has 3 tags";
+    };
 
-$dbic_trace->clear;
+    subtest 'update and add' => sub {
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags => [
+                (map { { name => $_->name.'More', id => $_->id } }
+                    $dvd_item->tags->all),
+                { name => "rob" },
+                { name => "bot" },
+            ],
+        );
 
-$dvd_rs->recursive_update(\%updates);
 
-ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "add several: update did not remove all tags'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "add several: update executed no delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "add several: update executed no inserts in dvdtag";
-is $dbic_trace->count_messages("^UPDATE tag "), 5, "add several: update executed five updates in tag";
+        $dbic_trace->clear;
 
-is $dvd_item->tags_rs->count, 5, "add several: DVD item has 5 tags";
+        $dvd_rs->recursive_update(\%updates);
 
+        ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did not remove all tags";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "update executed no delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "update executed two inserts in dvdtag";
+        is $dbic_trace->count_messages("^UPDATE tag "), 3, "update executed three updates in tag";
 
-#
-# updating and removing
-#
+        is $dvd_item->tags_rs->count, 5, "DVD item has 5 tags";
+    };
 
+    subtest 'remove several' => sub {
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => [4,5],
+        );
 
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => [
-            (map { { name => $_->name."More", id => $_->id } } $dvd_item->tags->all) ,
-    ],
-);
+        $dbic_trace->clear;
 
-$updates{tags} = [splice @{$updates{tags}}, 2, 3];
+        $dvd_rs->recursive_update(\%updates);
 
-$dbic_trace->clear;
+        ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did not remove all tags";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "update executed one delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "update executed no insert";
 
-$dvd_rs->recursive_update(\%updates);
+        is $dvd_item->tags_rs->count, 2, "DVD item has 2 tags";
+    };
 
-ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "add several: update did not remove all tags'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "add several: update executed one delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "add several: update executed no inserts in dvdtag";
-is $dbic_trace->count_messages("^UPDATE tag "), 3, "add several: update executed three updates in tag";
+    subtest 'remove all' => sub {
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => [],
+        );
 
-is $dvd_item->tags_rs->count, 3, "add several: DVD item has 3 tags";
+        $dbic_trace->clear;
 
+        $dvd_rs->recursive_update(\%updates);
 
-#
-# updating and adding
-#
+        ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did remove all tags";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "update executed no insert";
 
+        is $dvd_item->tags_rs->count, 0, "DVD item has no tags";
+    };
 
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => [
-            (map { { name => $_->name."More", id => $_->id } } $dvd_item->tags->all) ,
-            { name => "rob" },
-            { name => "bot" },
-    ],
-);
+    subtest 'old set_$rel behaviour' => sub {
+        my %updates = (
+        	dvd_id => $dvd_item->id,
+        	tags   => [2,4],
+        );
 
+        $dbic_trace->clear;
 
-$dbic_trace->clear;
+        $dvd_rs->recursive_update(\%updates, {m2m_force_set_rel => 1});
 
-$dvd_rs->recursive_update(\%updates);
+        ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did remove all tags";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "update executed 2 insert";
 
-ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "add several: update did not remove all tags'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 0, "add several: update executed no delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "add several: update executed two inserts in dvdtag";
-is $dbic_trace->count_messages("^UPDATE tag "), 3, "add several: update executed three updates in tag";
+        is $dvd_item->tags_rs->count, 2, "DVD item has 2 tags";
 
-is $dvd_item->tags_rs->count, 5, "add several: DVD item has 5 tags";
+        # doing this two times to test identical behaviour
+        $dbic_trace->clear;
 
+        $dvd_rs->recursive_update(\%updates, {m2m_force_set_rel => 1});
 
-#
-# removing several
-#
+        ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "update did remove all tags";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "update executed 2 insert";
 
-$tag_ids = [4,5];
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => $tag_ids,
-);
+        is $dvd_item->tags_rs->count, 2, "DVD item has 2 tags";
+    };
+};
 
-$dbic_trace->clear;
+subtest 'testing m2m updates without IntrospectableM2M' => sub {
+    ok ! $tag_rs->result_class->can("_m2m_metadata"), "tag rs has no m2m metadata";
+    my $tag_item = $tag_rs->first;
+    my $dvd_ids = [$tag_item->dvds_rs->get_column("dvd_id")->all];
 
-$dvd_rs->recursive_update(\%updates);
+    subtest 'add one' => sub {
+        push @$dvd_ids, 1;
 
-ok ! $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "remove several: update did not remove all tags'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "remove several: update executed one delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "remove several: update executed no insert";
+        my %updates = (
+        	id     => $tag_item->id,
+        	dvds   => $dvd_ids,
+        );
 
-is $dvd_item->tags_rs->count, 2, "remove several: DVD item has 2 tags";
+        $dbic_trace->clear;
 
+        $tag_rs->recursive_update(\%updates);
 
-#
-# empty arrayref
-#
+        ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "update did remove all dvds";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "update executed one delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 3, "update executed three insert";
 
-$tag_ids = [];
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => $tag_ids,
-);
+        is $tag_item->dvds_rs->count, 3, "tag item has 3 dvds";
+    };
 
-$dbic_trace->clear;
+    subtest 'no changes' => sub {
+        $dbic_trace->clear;
 
-$dvd_rs->recursive_update(\%updates);
+        my %updates = (
+        	id     => $tag_item->id,
+        	dvds   => $dvd_ids,
+        );
 
-ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "remove all: update did remove all tags'";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "remove all: update executed no insert";
+        $tag_rs->recursive_update(\%updates);
 
-is $dvd_item->tags_rs->count, 0, "remove all: DVD item has no tags";
+        is $dbic_trace->count_messages, 8, "eight queries executed";
+        is $dbic_trace->count_messages("^SELECT"), 4, "update executed two select queries";
+        is $dbic_trace->count_messages("^DELETE"), 1, "update executed one delete query";
+        is $dbic_trace->count_messages("^INSERT"), 3, "update executed three insert queries";
 
-#
-# old set_$rel behaviour
-#
+        is $tag_item->dvds_rs->count, 3, "tag item still has 3 dvds";
+    };
 
-$tag_ids = [2,4];
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => $tag_ids,
-);
+    subtest 'remove one' => sub {
+        shift @$dvd_ids;
 
-$dbic_trace->clear;
+        my %updates = (
+        	id     => $tag_item->id,
+        	dvds   => $dvd_ids,
+        );
 
-$dvd_rs->recursive_update(\%updates, {m2m_force_set_rel => 1});
+        $dbic_trace->clear;
 
-ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "remove several: update did remove all tags'";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "remove several: update executed 2 insert";
+        $tag_rs->recursive_update(\%updates);
 
-is $dvd_item->tags_rs->count, 2, "remove several: DVD item has 2 tags";
+        ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "update did remove all dvds";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "update executed one delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "update executed two insert";
 
-# doint this 2 times to test identical behaviour
-$tag_ids = [2,4];
-%updates = (
-	dvd_id => $dvd_item->id,
-	tags => $tag_ids,
-);
+        is $tag_item->dvds_rs->count, 2, "tag item has 2 dvds";
+    };
 
-$dbic_trace->clear;
+    subtest 'add recursive' => sub {
+        #push @$dvd_ids, ( 4, 5, 6 );
 
-$dvd_rs->recursive_update(\%updates, {m2m_force_set_rel => 1});
+        my %updates = (
+        	id     => $tag_item->id,
+        	dvds   => [
+                (map { { name => $_->name, dvd_id => $_->id } }
+                    $tag_item->dvds->all),
+                { name => "winnie", owner => 1 },
+                { name => "fanny" , owner => 1},
+                { name => "sammy" , owner => 1},
+            ],
+        );
 
-ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( dvd = \? \)'), "remove several: update did remove all tags'";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "remove several: update executed 2 insert";
+        $dbic_trace->clear;
 
-is $dvd_item->tags_rs->count, 2, "remove several: DVD item has 2 tags";
+        $tag_rs->recursive_update(\%updates);
 
-#################################################
-# testing m2m updates without IntrospectableM2M #
-#################################################
+        ok  $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "update did remove all dvds";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "update executed one delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 5, "update executed five inserts in dvdtag";
+        is $dbic_trace->count_messages("^INSERT INTO dvd "), 3, "update executed three inserts in dvd";
 
-my $tag_item = $tag_rs->first;
+        is $tag_item->dvds_rs->count, 5, "tag item has 5 dvds";
+    };
 
+    subtest 'remove several' => sub {
+        my %updates = (
+        	id     => $tag_item->id,
+        	dvds   => [3,5],
+        );
 
-#
-# adding one
-#
+        $dbic_trace->clear;
 
-my $dvd_ids = [$tag_item->dvds_rs->get_column("dvd_id")->all];
+        $tag_rs->recursive_update(\%updates);
 
-push @$dvd_ids, 1;
+        ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "update did remove all dvds";
+        is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "update executed one delete";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "update executed two insert";
 
+        is $tag_item->dvds_rs->count, 2, "tag item has 2 dvds";
+    };
 
-%updates = (
-	id => $tag_item->id,
-	dvds => $dvd_ids,
-);
+    subtest 'remove all' => sub {
+        my %updates = (
+        	id     => $tag_item->id,
+        	dvds   => [],
+        );
 
-$dbic_trace->clear;
+        $dbic_trace->clear;
 
-$tag_rs->recursive_update(\%updates);
+        $tag_rs->recursive_update(\%updates);
 
-ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "add one: update did remove all dvds'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "add one: update executed one delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 3, "add one: update executed three insert";
+        ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "update did remove all dvds";
+        is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "update executed no insert";
 
-is $tag_item->dvds_rs->count, 3, "add one: tag item has 3 dvds";
-
-#
-# no changes
-#
-
-$dbic_trace->clear;
-
-$tag_rs->recursive_update(\%updates);
-
-is $dbic_trace->count_messages(), 8, "no changes: eight queries executed";
-is $dbic_trace->count_messages("^SELECT"), 4, "no changes: update executed two select queries";
-is $dbic_trace->count_messages("^DELETE"), 1, "no changes: update executed one delete query";
-is $dbic_trace->count_messages("^INSERT"), 3, "no changes: update executed three insert queries";
-
-is $tag_item->dvds_rs->count, 3, "no changes: tag item still has 3 dvds";
-
-#
-# removing one
-#
-
-shift @$dvd_ids;
-
-%updates = (
-	id => $tag_item->id,
-	dvds => $dvd_ids,
-);
-
-$dbic_trace->clear;
-
-$tag_rs->recursive_update(\%updates);
-
-ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "remove one: update did remove all dvds'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "remove one: update executed one delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "remove one: update executed two insert";
-
-is $tag_item->dvds_rs->count, 2, "remove one: tag item has 2 dvds";
-
-
-#
-# adding recursive
-#
-
-#push @$dvd_ids, ( 4, 5, 6 );
-
-%updates = (
-	id => $tag_item->id,
-	dvds => [
-            (map { { name => $_->name, dvd_id => $_->id } } $tag_item->dvds->all) ,
-            { name => "winnie", owner => 1 },
-            { name => "fanny" , owner => 1},
-            { name => "sammy" , owner => 1},
-    ],
-);
-
-$dbic_trace->clear;
-
-$tag_rs->recursive_update(\%updates);
-
-ok  $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "add several: update did remove all dvds'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "add several: update executed one delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 5, "add several: update executed five inserts in dvdtag";
-is $dbic_trace->count_messages("^INSERT INTO dvd "), 3, "add several: update executed three inserts in dvd";
-
-is $tag_item->dvds_rs->count, 5, "add several: tag item has 5 dvds";
-
-
-#
-# removing several
-#
-
-$dvd_ids = [3,5];
-%updates = (
-	id => $tag_item->id,
-	dvds => $dvd_ids,
-);
-
-$dbic_trace->clear;
-
-$tag_rs->recursive_update(\%updates);
-
-ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "remove several: update did remove all dvds'";
-is $dbic_trace->count_messages("^DELETE FROM dvdtag "), 1, "remove several: update executed one delete";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 2, "remove several: update executed two insert";
-
-is $tag_item->dvds_rs->count, 2, "remove several: tag item has 2 dvds";
-
-
-#
-# empty arrayref
-#
-
-$dvd_ids = [];
-%updates = (
-	id => $tag_item->id,
-	dvds => $dvd_ids,
-);
-
-$dbic_trace->clear;
-
-$tag_rs->recursive_update(\%updates);
-
-ok $dbic_trace->count_messages('^DELETE FROM dvdtag WHERE \( tag = \? \)'), "remove all: update did remove all dvds'";
-is $dbic_trace->count_messages("^INSERT INTO dvdtag "), 0, "remove all: update executed no insert";
-
-is $tag_item->dvds_rs->count, 0, "remove all: tag item has no dvds";
+        is $tag_item->dvds_rs->count, 0, "tag item has no dvds";
+    };
+};
 
 done_testing;
