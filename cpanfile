@@ -1,3 +1,4 @@
+requires 'perl' => 5.014;
 requires 'DBIx::Class' => 0.08103;
 requires 'DBIx::Class::IntrospectableM2M';
 requires 'SQL::Translator' => 0.11016;
