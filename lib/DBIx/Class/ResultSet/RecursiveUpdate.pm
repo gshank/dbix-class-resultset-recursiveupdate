@@ -40,7 +40,7 @@ package DBIx::Class::ResultSet::RecursiveUpdate::Functions;
 use v5.14; # for non-destructive substitution regex modifier
 use Carp::Clan qw/^DBIx::Class|^HTML::FormHandler|^Try::Tiny/;
 use Scalar::Util qw( blessed );
-use List::MoreUtils qw/ any all none /;
+use List::Util qw/ any all none /;
 use Try::Tiny;
 use Data::Dumper::Concise;
 
