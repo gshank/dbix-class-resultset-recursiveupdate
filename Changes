@@ -1,6 +1,10 @@
 Revision history for DBIx::Class::ResultSet::RecursiveUpdate
 
 {{ $NEXT }}
+    - Use List::Util instead of List::MoreUtils (GH PR#25)
+      Because List::Util is shipped with Perl, has the functions we use since
+      quite a few years which lowers our number of dependencies.
+      Thanks @plicease!
 
 0.44      2024-07-10 14:33:33+02:00 Europe/Vienna
     - Fix missing Perl v5.14 requirement (GH #22)
